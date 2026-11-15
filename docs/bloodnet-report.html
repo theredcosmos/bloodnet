@@ -516,6 +516,11 @@ cd frontend && npm start
 docker compose up -d --build
 # http://localhost:8081
 # Swagger: /swagger-ui.html</pre></div>
+        <div class="panel"><h3>Demo data</h3>
+<pre class="code">python scripts/seed_demo_data.py
+# 5 banks, 4 hospitals, 150 donors,
+# ~370 units, requests and transfers
+# in every state. Safe to re-run.</pre></div>
         <div class="panel"><h3>Tests</h3>
 <pre class="code">cd backend && mvn verify      # needs Docker
 cd frontend && npx ng test --watch=false</pre></div>

@@ -59,6 +59,12 @@ One line per choice and the reason. Newest problems found while building are at 
 - **ShedLock with DB time**: each job runs on one instance even with several app containers.
 - **Spring Boot structured logs (ECS JSON) in the `prod` profile**: logs can be shipped to ELK/Loki as-is; dev keeps readable text with requestId and user in every line.
 
+## Demo data
+- **`scripts/seed_demo_data.py` goes through the REST API, not SQL inserts**: every unit, reservation and transfer obeys the real rules, so the demo can't show impossible states.
+- **Extra banks/hospitals via `scripts/demo_reference_data.sql`, not a Flyway migration**: demo rows must never reach a real deployment.
+- **Fixed random seed, phone-keyed donors, skip-if-present steps**: re-running adds nothing.
+- **Transfers pick a group the sender actually has**: the first run tried to dispatch O+ red cells that hospital requests had already reserved and got a correct 422; the script now checks live stock first.
+
 ## Problems found while building (self-annealing log)
 - **Testcontainers 1.20 + Docker Engine 29**: Docker 29 raised the minimum API version, so Testcontainers reported "Docker not available". Fixed by overriding `testcontainers.version` to 1.21.4.
 - **Two `CorsConfigurationSource` beans** (ours + Spring MVC's): injecting by type failed. Fixed with `cors(Customizer.withDefaults())`, which looks up our bean by name.
