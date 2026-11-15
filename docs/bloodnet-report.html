@@ -1,0 +1,704 @@
+<title>BloodNet Build Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: left sticky contents rail + one reading column; Q&A is a filterable list of disclosure rows. */
+:root {
+  --bg: #fbfafa;
+  --surface: #ffffff;
+  --sunken: #f3f0f0;
+  --fg: #1d1a1b;
+  --muted: #6a6264;
+  --line: #e7e1e2;
+  --accent: #a3122a;        /* blood red, used sparingly */
+  --accent-soft: #fbe9ec;
+  --ok: #17694a;
+  --ok-soft: #e4f3ec;
+  --warn: #9a5b00;
+  --warn-soft: #fdf1dc;
+  --info: #1f4f8a;
+  --info-soft: #e6eef8;
+  --code-bg: #f4f1f2;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141113; --surface: #1c181a; --sunken: #231e20; --fg: #efe9ea; --muted: #a79da0; --line: #352e31;
+    --accent: #f0566d; --accent-soft: #3a1820; --ok: #5fd0a2; --ok-soft: #12302a; --warn: #f2b45a; --warn-soft: #36280f;
+    --info: #8db8ee; --info-soft: #172a40; --code-bg: #231e20; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141113; --surface: #1c181a; --sunken: #231e20; --fg: #efe9ea; --muted: #a79da0; --line: #352e31;
+  --accent: #f0566d; --accent-soft: #3a1820; --ok: #5fd0a2; --ok-soft: #12302a; --warn: #f2b45a; --warn-soft: #36280f;
+  --info: #8db8ee; --info-soft: #172a40; --code-bg: #231e20; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15.5px; line-height: 1.6; }
+.wrap {
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; max-width: 1180px; margin: 0 auto;
+  padding-block: 40px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 60px; } }
+
+/* contents rail */
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .brand { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+nav.toc .drop { width: 14px; height: 18px; background: var(--accent); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; transform: rotate(0deg); clip-path: path("M7 0 C7 0 0 8 0 12 A7 6 0 0 0 14 12 C14 8 7 0 7 0 Z"); }
+nav.toc a { display: block; padding: 5px 10px; color: var(--muted); text-decoration: none; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); border-left-color: var(--accent); outline: none; }
+@media (max-width: 860px) {
+  nav.toc { position: static; }
+  nav.toc .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  nav.toc a { border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; }
+}
+
+main { min-width: 0; }
+section { padding-block: 8px 40px; border-bottom: 1px solid var(--line); margin-bottom: 40px; scroll-margin-top: 20px; }
+section:last-child { border-bottom: 0; }
+h1, h2, h3 { font-family: var(--display); letter-spacing: -0.015em; text-wrap: balance; line-height: 1.2; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 800; margin: 0 0 12px; }
+h2 { font-size: 26px; font-weight: 700; margin: 0 0 14px; }
+h3 { font-size: 18px; font-weight: 600; margin: 28px 0 8px; }
+p, li { max-width: 68ch; }
+.lede { font-size: 18px; color: var(--muted); max-width: 62ch; }
+.eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 6px; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+pre.code { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.55; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* facts strip */
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 24px 0 8px; }
+.fact { background: var(--surface); padding: 14px 16px; }
+.fact .n { font-family: var(--display); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fact .l { font-size: 13px; color: var(--muted); }
+.fact.hl .n { color: var(--accent); }
+
+.stack { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.tag { font-family: var(--mono); font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--sunken); color: var(--fg); border: 1px solid var(--line); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; background: var(--sunken); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.info { background: var(--info-soft); color: var(--info); }
+.pill.red { background: var(--accent-soft); color: var(--accent); }
+
+/* diagrams */
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; margin: 12px 0 6px; }
+.diagram pre.mermaid { margin: 0; background: transparent; }
+.cap { font-size: 13px; color: var(--muted); margin: 0 0 18px; }
+
+/* flow steps (a real sequence, so numbered) */
+ol.flow { list-style: none; padding: 0; margin: 12px 0; counter-reset: s; display: grid; gap: 10px; }
+ol.flow li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; max-width: none; }
+ol.flow li::before { content: counter(s); font-family: var(--mono); font-size: 13px; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* bug log */
+.bug { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
+.bug > div { background: var(--surface); padding: 12px 14px; font-size: 14px; }
+.bug .t { grid-column: 1 / -1; background: var(--sunken); font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bug .k { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); display: block; margin-bottom: 2px; }
+@media (max-width: 640px) { .bug { grid-template-columns: minmax(0, 1fr); } }
+
+/* Q&A */
+.qa-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0; }
+.qa-tools input[type=search] { flex: 1 1 240px; min-width: 0; font: inherit; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.toggle { font-size: 13px; display: inline-flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
+.count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.qa { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.qa details { border-bottom: 1px solid var(--line); }
+.qa details:last-child { border-bottom: 0; }
+.qa summary { cursor: pointer; padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; list-style: none; font-weight: 500; }
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--sunken); }
+.qa .cat { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; padding-top: 3px; }
+.qa .a { padding: 0 16px 14px; color: var(--fg); }
+.qa .a p { margin: 0 0 8px; }
+.qa .a ul { margin: 0 0 8px; padding-left: 20px; }
+.qa .ref { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.qa .empty { padding: 20px; color: var(--muted); }
+
+.note { background: var(--accent-soft); border-radius: 8px; padding: 12px 16px; font-size: 14px; }
+.cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <div class="brand"><span class="drop" aria-hidden="true"></span>BloodNet</div>
+    <div class="links">
+      <a href="#overview">Overview</a>
+      <a href="#flow">How the app works</a>
+      <a href="#modules">Modules & data</a>
+      <a href="#concurrency">Allocation under load</a>
+      <a href="#built">What we built</a>
+      <a href="#fixes">Problems we hit</a>
+      <a href="#qa">Interview Q&A</a>
+      <a href="#glossary">Quick-fire glossary</a>
+      <a href="#run">Run it</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============================================================ OVERVIEW -->
+    <section id="overview">
+      <div class="eyebrow">Build report · November 2026</div>
+      <h1>BloodNet build report</h1>
+      <p class="lede">A network for blood banks and hospitals. Banks record donations as separate components, hospitals find compatible stock nearby and raise requests, and banks allocate units, issue them and transfer stock to each other.</p>
+
+      <div class="facts">
+        <div class="fact"><div class="n">7</div><div class="l">business modules, boundaries checked by a test</div></div>
+        <div class="fact"><div class="n">41</div><div class="l">backend tests passing (29 unit, 12 on real MySQL)</div></div>
+        <div class="fact hl"><div class="n">60 / 60</div><div class="l">units reserved by 50 parallel requests, 0 given twice</div></div>
+        <div class="fact"><div class="n">126</div><div class="l">compatibility rules generated from 2 SQL rules</div></div>
+        <div class="fact"><div class="n">141 KB</div><div class="l">initial Angular download (gzipped), screens lazy-loaded</div></div>
+      </div>
+
+      <h3>The pitch, in about a minute</h3>
+      <p>BloodNet connects blood banks and hospitals. When a donation is recorded it becomes three units (red cells, platelets, plasma), and each one gets its own expiry date. A hospital searches for nearby banks that hold compatible stock and raises a request. Bank staff allocate units to it, and that allocation stays correct when many people allocate at once: a test runs 50 parallel allocations against real MySQL and checks that no unit goes to two requests. Banks can move stock between each other through a transfer workflow. Background jobs expire old units, release reservations nobody collected, and suggest moving near-expiry units to banks that are short.</p>
+
+      <div class="stack" aria-label="Tech stack">
+        <span class="tag">Java 17</span><span class="tag">Spring Boot 3.4</span><span class="tag">Spring Modulith 1.3</span><span class="tag">Spring Security + JWT</span>
+        <span class="tag">JPA / Hibernate 6</span><span class="tag">MySQL 8</span><span class="tag">Flyway</span><span class="tag">ShedLock</span>
+        <span class="tag">Testcontainers</span><span class="tag">Angular 17</span><span class="tag">Angular Material</span><span class="tag">Signals + RxJS</span>
+        <span class="tag">Docker Compose</span><span class="tag">nginx</span><span class="tag">GitHub Actions</span>
+      </div>
+
+      <h3>Three roles</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Role</th><th>Lands on</th><th>Can do</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill red">ADMIN</span></td><td>Dashboard (all banks)</td><td>Everything, across all banks; create users; force a dashboard refresh</td></tr>
+          <tr><td><span class="pill info">BANK_STAFF</span></td><td>Dashboard (own bank)</td><td>Donors, donations, inventory, allocate/issue requests, transfers, reports. Only for their own bank</td></tr>
+          <tr><td><span class="pill ok">HOSPITAL</span></td><td>Hospital portal</td><td>Search nearby banks, raise and cancel their own requests, follow their status</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ============================================================ FLOW -->
+    <section id="flow">
+      <div class="eyebrow">Flow of the app</div>
+      <h2>How the app works</h2>
+
+      <h3>Request path through the system</h3>
+      <div class="diagram"><pre class="mermaid">
+flowchart LR
+  B[Browser<br/>Angular 17] -->|/ and /api| N[nginx]
+  N -->|static files| B
+  N -->|/api/*| F[JwtAuthFilter]
+  F --> C[Controller<br/>@PreAuthorize]
+  C --> S[Service<br/>@Transactional · @Audited]
+  S --> R[(MySQL 8<br/>InnoDB)]
+  S -. sync event .-> L[Inventory listener<br/>same transaction]
+  S -. async event after commit .-> NT[Notifications]
+  J[Scheduled jobs<br/>ShedLock] --> S
+      </pre></div>
+      <p class="cap">One Spring Boot app behind nginx. Stock changes caused by transfers run inside the same transaction; notifications run afterwards.</p>
+
+      <h3>1. Donation becomes stock</h3>
+      <ol class="flow">
+        <li><div>Staff register a donor (name, group, date of birth, phone). Phone is unique.</div></li>
+        <li><div>Staff record a donation. The donor row is locked with <code>SELECT … FOR UPDATE</code> so two people can't record two donations at the same moment.</div></li>
+        <li><div>Rules checked: age 18–65 and at least 90 days since the last donation. A failure returns <span class="pill warn">422</span> with the reason and the next eligible date.</div></li>
+        <li><div>Inventory creates one unit per component. Expiry is collection time plus shelf life: red cells 42 days, platelets 5, plasma 365.</div></li>
+      </ol>
+
+      <h3>2. Hospital request to issued units</h3>
+      <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  participant H as Hospital
+  participant API as BloodNet API
+  participant DB as MySQL
+  participant S as Bank staff
+  H->>API: GET /banks/nearby (group, component, radius)
+  API->>DB: ST_Distance_Sphere + count compatible units
+  H->>API: POST /requests (bank, O+, 2 x red cells)
+  API-->>S: notification "new URGENT request"
+  S->>API: POST /requests/42/allocate
+  API->>DB: lock request row (FOR UPDATE)
+  API->>DB: pick units FOR UPDATE SKIP LOCKED
+  API->>DB: units RESERVED, allocation rows, COMMIT
+  API-->>H: notification "2 of 2 reserved"
+  S->>API: POST /requests/42/issue
+  API->>DB: units ISSUED
+  Note over API,DB: if not issued within 2h,<br/>a job releases the units
+      </pre></div>
+
+      <h3>3. Request status</h3>
+      <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> PENDING
+  PENDING --> PARTIALLY_RESERVED: allocate (some units)
+  PENDING --> RESERVED: allocate (all units)
+  PARTIALLY_RESERVED --> RESERVED: allocate again
+  PARTIALLY_RESERVED --> ISSUED: issue
+  RESERVED --> ISSUED: issue
+  RESERVED --> PENDING: 2h timeout job
+  PARTIALLY_RESERVED --> PENDING: 2h timeout job
+  PENDING --> CANCELLED
+  RESERVED --> CANCELLED: units go back to stock
+  ISSUED --> [*]
+  CANCELLED --> [*]
+      </pre></div>
+
+      <h3>4. Transfer between banks</h3>
+      <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> REQUESTED: receiving bank asks
+  REQUESTED --> APPROVED: sender
+  REQUESTED --> REJECTED: sender
+  REQUESTED --> CANCELLED: either bank
+  APPROVED --> DISPATCHED: sender, units become IN_TRANSIT
+  APPROVED --> CANCELLED: either bank
+  DISPATCHED --> RECEIVED: receiver, units move to their bank
+  RECEIVED --> [*]
+      </pre></div>
+      <p class="cap">The allowed moves live on the <code>TransferStatus</code> enum. If dispatch finds too few units, the inventory listener throws and the status change rolls back with it.</p>
+
+      <h3>5. Life of one unit</h3>
+      <div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> AVAILABLE: donation recorded
+  AVAILABLE --> RESERVED: allocated to a request
+  RESERVED --> AVAILABLE: timeout or cancel
+  RESERVED --> ISSUED: handed to hospital
+  AVAILABLE --> IN_TRANSIT: transfer dispatched
+  IN_TRANSIT --> AVAILABLE: received at other bank
+  AVAILABLE --> EXPIRED: expiry job
+  AVAILABLE --> DISCARDED: quality issue
+      </pre></div>
+
+      <h3>6. Background jobs</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Job</th><th>Runs</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>Expiry</td><td class="mono">every 10 min</td><td>AVAILABLE units past expiry become EXPIRED; each affected bank is notified</td></tr>
+          <tr><td>Reservation timeout</td><td class="mono">every 1 min</td><td>Releases reservations older than 2 h, one transaction per request, re-checked under the row lock</td></tr>
+          <tr><td>Rebalance suggestions</td><td class="mono">hourly</td><td>Units expiring within 72 h → nearby banks (≤ 50 km) holding fewer than 5 of that group/component</td></tr>
+          <tr><td>Stock summary</td><td class="mono">every 1 min</td><td>Rebuilds the small <code>stock_summary</code> table the dashboard reads</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap">All four use ShedLock, so with several app instances each job still runs on only one of them.</p>
+    </section>
+
+    <!-- ============================================================ MODULES -->
+    <section id="modules">
+      <div class="eyebrow">Structure</div>
+      <h2>Modules and data</h2>
+      <p>Each package directly under <code>com.bloodnet</code> is a module. Other modules may use only the classes in its top package; its <code>internal</code> package is private. <code>ModularityTest</code> fails the build otherwise. I checked it by adding a class in <code>donor</code> that used <code>inventory.internal.BloodUnit</code>; the build failed with "Module 'donor' depends on non-exposed type".</p>
+
+      <div class="diagram"><pre class="mermaid">
+flowchart TB
+  auth --> inventory
+  auth --> request
+  donor --> inventory
+  request --> inventory
+  inventory -->|listens to events| transfer
+  reporting --> inventory
+  reporting --> request
+  reporting --> transfer
+  notification -.->|listens| request
+  notification -.->|listens| transfer
+  notification -.->|listens| inventory
+      </pre></div>
+      <p class="cap">No cycles. Every module may also use <code>shared</code> (enums, the current user, exceptions, audit, error handler).</p>
+
+      <div class="tbl"><table>
+        <thead><tr><th>Module</th><th>Owns tables</th><th>Public API others use</th></tr></thead>
+        <tbody>
+          <tr><td>auth</td><td class="mono">app_user</td><td>none (login, users, JWT filter, security config)</td></tr>
+          <tr><td>donor</td><td class="mono">donor, donation</td><td>none</td></tr>
+          <tr><td>inventory</td><td class="mono">blood_bank, blood_unit, blood_compatibility, rebalance_suggestion</td><td><code>BankDirectory</code>, <code>UnitAllocator</code>, <code>UnitIntake</code>, <code>InventoryStats</code></td></tr>
+          <tr><td>request</td><td class="mono">hospital, blood_request, request_allocation</td><td><code>HospitalDirectory</code>, <code>RequestQueries</code>, request events</td></tr>
+          <tr><td>transfer</td><td class="mono">transfer, transfer_event</td><td><code>TransferQueries</code>, <code>TransferDispatched</code>, <code>TransferReceived</code></td></tr>
+          <tr><td>notification</td><td class="mono">notification</td><td>none (listens to events)</td></tr>
+          <tr><td>reporting</td><td class="mono">stock_summary</td><td>none (dashboard and reports)</td></tr>
+          <tr><td>shared</td><td class="mono">audit_log</td><td>enums, <code>AuthUser</code>, <code>BankAccess</code>, exceptions, <code>@Audited</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Shelf life by component</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Component</th><th class="num">Shelf life</th><th>Compatibility rule used</th></tr></thead>
+        <tbody>
+          <tr><td>Red cells</td><td class="num">42 days</td><td>Donor antigens must be a subset of the recipient's; Rh− recipients only get Rh−</td></tr>
+          <tr><td>Whole blood</td><td class="num">35 days</td><td>Same as red cells</td></tr>
+          <tr><td>Platelets</td><td class="num">5 days</td><td>Reverse ABO (plasma rule), Rh ignored. A simplification for the project</td></tr>
+          <tr><td>Plasma</td><td class="num">365 days</td><td>Reverse ABO: O recipients take any, AB only AB</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ============================================================ CONCURRENCY -->
+    <section id="concurrency">
+      <div class="eyebrow">The strongest interview story</div>
+      <h2>Allocation under load</h2>
+      <p><code>AllocationService.allocate()</code> runs at <code>READ_COMMITTED</code> and does three things:</p>
+      <ol class="flow">
+        <li><div><strong>Lock the request row</strong> (<code>@Lock(PESSIMISTIC_WRITE)</code> → <code>SELECT … FOR UPDATE</code>). Two people allocating the same request run one after the other; the second sees it's already RESERVED and gets a 409.</div></li>
+        <li><div><strong>Lock free units with <code>SKIP LOCKED</code>.</strong> One query per compatible group, exact group first, ordered by expiry. Rows another transaction holds are skipped instead of waited on.</div></li>
+        <li><div><strong>Reserve and record:</strong> units become RESERVED for 2 hours, <code>request_allocation</code> rows are written, the request counters are updated, commit.</div></li>
+      </ol>
+
+<pre class="code">SELECT id FROM blood_unit
+WHERE bank_id = :bankId AND component_type = :component
+  AND status = 'AVAILABLE' AND blood_group = :group AND expires_at > :after
+ORDER BY expires_at, id
+LIMIT :limit
+FOR UPDATE SKIP LOCKED</pre>
+      <p class="cap">Index <code>idx_unit_alloc (bank_id, component_type, status, blood_group, expires_at)</code> returns rows already in expiry order, so InnoDB stops after LIMIT rows and locks only those.</p>
+
+      <h3>Test results (Testcontainers, MySQL 8, 50 threads released by one latch)</h3>
+      <div class="tbl"><table>
+        <thead><tr><th>Scenario</th><th class="num">Threads</th><th class="num">Reserved</th><th class="num">Wall time</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr><td>50 requests × 2 units; 60 compatible units + 20 incompatible</td><td class="num">50</td><td class="num">60</td><td class="num">114 ms</td><td><span class="pill ok">0 double allocations</span> 0 incompatible units touched, 0 errors</td></tr>
+          <tr><td>50 threads allocating the same 5-unit request</td><td class="num">50</td><td class="num">5</td><td class="num">184 ms</td><td><span class="pill ok">exactly 5</span> 49 clean 409 conflicts</td></tr>
+          <tr><td>Selection order (single thread)</td><td class="num">1</td><td class="num">2</td><td class="num">–</td><td><span class="pill ok">pass</span> exact group first, then soonest expiry; O− left alone</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cap">Times are from one local run on the development laptop and will vary between machines.</p>
+
+      <div class="note"><strong>What the test caught.</strong> The first version picked units in one query with <code>ORDER BY (blood_group = :preferred) DESC, expires_at</code>. That expression forces a filesort, and InnoDB locks every row it reads before sorting. The first transaction locked all 60 matching units, and the other 49 skipped all of them. Only <strong>3 of 60</strong> units were reserved. Splitting it into one indexed query per blood group fixed it: <strong>60 of 60</strong>.</div>
+    </section>
+
+    <!-- ============================================================ WHAT WE BUILT -->
+    <section id="built">
+      <div class="eyebrow">What we did</div>
+      <h2>What we built, phase by phase</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Phase</th><th>Delivered</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>0 · Setup</td><td><code>backend/</code>, <code>frontend/</code>, <code>docs/</code>; Spring Boot 3.4 on Java 17 with Web, JPA, Validation, Security, MySQL, Flyway, Actuator, Lombok, Modulith; Angular 17 + Material; <code>docker-compose.dev.yml</code> (MySQL only); GitHub Actions CI</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>1 · Schema & domain</td><td><code>V1__schema.sql</code> (16 tables), <code>V2__seed_compatibility.sql</code> (126 rules, 2 test banks, 1 hospital); 7 modules + shared; <code>BloodGroup</code>, <code>UnitStatus</code>, <code>ComponentType</code> with shelf life; <code>ModularityTest</code></td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>2 · Auth & shell</td><td>BCrypt users, JWT login + filter, 3 roles, <code>@PreAuthorize</code> + own-bank checks, <code>GlobalExceptionHandler</code> (problem+json); Angular login, <code>AuthService</code>, JWT + error interceptors, role guard, red sidebar, lazy routes</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>3 · Donors & inventory</td><td>Donor registration, 90-day and age rule, donation → one unit per component; inventory API with filters, paging and whitelisted sorting; Donors and Inventory screens</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>4 · Requests & allocation</td><td>Hospital request API; <code>allocate()</code> with row lock + SKIP LOCKED at READ_COMMITTED; issue; 2 h reservation timeout; 50-thread concurrency test; Hospital portal and Requests screens</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>5 · Nearby & transfers</td><td><code>ST_Distance_Sphere</code> search; transfer state machine; <code>TransferDispatched</code>/<code>TransferReceived</code> events move stock; Transfers screen with Incoming/Outgoing tabs and progress steps</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>6 · Jobs & dashboard</td><td>4 ShedLock jobs (expiry, reservation timeout, rebalance, stock summary); dashboard API + screen polling every 60 s</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>7 · Hardening & reports</td><td>Audit aspect → <code>audit_log</code>; expiring and wastage reports (with CSV export); Swagger UI at <code>/swagger-ui.html</code>; validation everywhere; request-id logging and ECS JSON logs in prod; unit tests for the rules</td><td><span class="pill warn">Postman collection not made</span></td></tr>
+          <tr><td>8 · Containerize</td><td>Multi-stage backend Dockerfile (layered jar, non-root); nginx image serving Angular and proxying <code>/api</code>; full <code>docker-compose.yml</code> with MySQL volume</td><td><span class="pill info">built; hosting not done</span></td></tr>
+          <tr><td>9 · Microservice taste</td><td>Optional notification-service over RabbitMQ. The outbox (Modulith event registry) is already in place for it</td><td><span class="pill info">not started</span></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Tests</h3>
+      <div class="cols2">
+        <div class="panel"><h3>Unit & architecture (29)</h3>
+          <p><code>EligibilityPolicyTest</code> (6), <code>BloodRequestTest</code> (6), <code>TransferStatusTest</code> (11), <code>JwtServiceTest</code> (4: round trip, expired, tampered, short secret), <code>ModularityTest</code> (2, also writes PlantUML module diagrams).</p></div>
+        <div class="panel"><h3>Integration on MySQL (12)</h3>
+          <p><code>BloodnetFlowIT</code> (9): security rules, donation → units + 90-day rule + validation errors, request → allocate → issue, timeout release, transfer flow, dispatch rollback, expiry job, dashboard, seed data. <code>AllocationConcurrencyIT</code> (3).</p></div>
+        <div class="panel"><h3>Frontend (4)</h3>
+          <p>Root component plus the group, label and relative-time pipes. Production build passes the size budgets.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ FIXES -->
+    <section id="fixes">
+      <div class="eyebrow">Self-annealing log</div>
+      <h2>Problems we hit and how they were fixed</h2>
+      <p>Each one was found by running the code or the tests, fixed, re-tested, and written down in <code>docs/decisions.md</code>.</p>
+
+      <div class="bug"><div class="t"><span class="pill red">concurrency</span>Only 3 of 60 units reserved under 50 parallel requests</div>
+        <div><span class="k">Cause</span>An <code>ORDER BY</code> on an expression forced a filesort; InnoDB locked every matching row before LIMIT, so the other transactions skipped them all.</div>
+        <div><span class="k">Fix</span>One query per blood group, ordered by the indexed <code>expires_at</code>. Now 60 of 60.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill red">time zones</span>Expired reservations were not released</div>
+        <div><span class="k">Cause</span>The test DB URL had no <code>connectionTimeZone=UTC</code>. Plain JDBC wrote IST, Hibernate wrote UTC: 5 h 30 apart.</div>
+        <div><span class="k">Fix</span>UTC parameters on the test URL, and the app sets the JVM zone to UTC at startup.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill warn">tooling</span>Testcontainers said "Docker not available"</div>
+        <div><span class="k">Cause</span>Docker Engine 29 raised its minimum API version, which Testcontainers 1.20 didn't handle.</div>
+        <div><span class="k">Fix</span>Pinned <code>testcontainers.version</code> to 1.21.4 in the pom.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill warn">database</span><code>EVENT_PUBLICATION</code> doesn't exist</div>
+        <div><span class="k">Cause</span>Spring Modulith's MySQL SQL uses upper case, and MySQL on Linux has case-sensitive table names.</div>
+        <div><span class="k">Fix</span>Created the table as <code>EVENT_PUBLICATION</code> in V1.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill warn">Spring</span>Two <code>CorsConfigurationSource</code> beans</div>
+        <div><span class="k">Cause</span>Spring MVC registers one too, so injecting by type was ambiguous.</div>
+        <div><span class="k">Fix</span><code>.cors(Customizer.withDefaults())</code>, which picks our bean by name.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill warn">AOP</span>"JoinPointMatch was NOT bound" in the audit aspect</div>
+        <div><span class="k">Cause</span>At <code>HIGHEST_PRECEDENCE</code> it ran before Spring's <code>ExposeInvocationInterceptor</code>.</div>
+        <div><span class="k">Fix</span>Order <code>HIGHEST_PRECEDENCE + 100</code>: still outside <code>@Transactional</code>.</div></div>
+
+      <div class="bug"><div class="t"><span class="pill info">Angular</span>Template name clash and <code>@let</code></div>
+        <div><span class="k">Cause</span>The <code>#nav</code> template ref hid the <code>nav()</code> signal; <code>@let</code> only exists from Angular 18.1.</div>
+        <div><span class="k">Fix</span>Renamed the signal to <code>menu()</code>; replaced <code>@let</code> with component methods.</div></div>
+    </section>
+
+    <!-- ============================================================ Q&A -->
+    <section id="qa">
+      <div class="eyebrow">Interview prep</div>
+      <h2>Questions you may be asked</h2>
+      <p>Click a question to see the answer. Turn on quiz mode to keep answers closed while you search and filter.</p>
+
+      <div class="qa-tools">
+        <input type="search" id="qa-search" placeholder="Search questions and answers" aria-label="Search questions and answers">
+        <label class="toggle" for="qa-open"><input type="checkbox" id="qa-open"> Open all answers</label>
+      </div>
+      <div class="chips" id="qa-chips" role="group" aria-label="Filter by topic"></div>
+      <p class="count" id="qa-count" aria-live="polite"></p>
+      <div class="qa" id="qa-list"></div>
+    </section>
+
+    <!-- ============================================================ GLOSSARY -->
+    <section id="glossary">
+      <div class="eyebrow">Quick-fire</div>
+      <h2>What does this do?</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Thing</th><th>One-line answer</th></tr></thead>
+        <tbody>
+          <tr><td><code>@Modulithic(sharedModules = "shared")</code></td><td>Marks the app for Spring Modulith; <code>shared</code> is usable everywhere</td></tr>
+          <tr><td><code>@ApplicationModuleListener</code></td><td>Async, after-commit, own-transaction event listener</td></tr>
+          <tr><td><code>@Lock(PESSIMISTIC_WRITE)</code></td><td>Turns a JPA query into <code>SELECT … FOR UPDATE</code></td></tr>
+          <tr><td><code>FOR UPDATE SKIP LOCKED</code></td><td>Lock rows, skipping any another transaction already holds</td></tr>
+          <tr><td><code>@Version</code></td><td>Optimistic lock column; an update from a stale copy fails</td></tr>
+          <tr><td><code>Propagation.MANDATORY</code></td><td>Must join an existing transaction, otherwise throws</td></tr>
+          <tr><td><code>Isolation.READ_COMMITTED</code></td><td>See only committed data; InnoDB takes no gap locks</td></tr>
+          <tr><td><code>@PreAuthorize</code></td><td>Method-level access check written in SpEL</td></tr>
+          <tr><td><code>@SchedulerLock</code></td><td>ShedLock: only one instance runs this job per tick</td></tr>
+          <tr><td><code>ProblemDetail</code></td><td>Spring's RFC 7807 error body (title, detail, status)</td></tr>
+          <tr><td><code>ddl-auto: validate</code></td><td>Hibernate checks entities against tables, changes nothing</td></tr>
+          <tr><td><code>open-in-view: false</code></td><td>No DB session while the response is being written</td></tr>
+          <tr><td><code>INSERT IGNORE</code> + unique key</td><td>Re-running a job doesn't create duplicates</td></tr>
+          <tr><td><code>ON DUPLICATE KEY UPDATE</code></td><td>MySQL upsert, used for <code>stock_summary</code></td></tr>
+          <tr><td><code>ST_Distance_Sphere</code></td><td>Distance in metres between two lng/lat points on a sphere</td></tr>
+          <tr><td><code>withInterceptors([...])</code></td><td>Registers Angular 17 functional HTTP interceptors</td></tr>
+          <tr><td><code>loadComponent</code></td><td>Lazy-loads a standalone component for a route</td></tr>
+          <tr><td><code>switchMap</code></td><td>Cancels the previous request when a new value arrives</td></tr>
+          <tr><td><code>takeUntilDestroyed()</code></td><td>Unsubscribes automatically when the component is destroyed</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- ============================================================ RUN -->
+    <section id="run">
+      <div class="eyebrow">Run it</div>
+      <h2>Running the project</h2>
+      <div class="cols2">
+        <div class="panel"><h3>Local development</h3>
+<pre class="code">docker compose -f docker-compose.dev.yml up -d
+cd backend && mvn spring-boot:run
+cd frontend && npm start
+# http://localhost:4200</pre></div>
+        <div class="panel"><h3>Full stack in Docker</h3>
+<pre class="code">cp .env.example .env   # set JWT_SECRET
+docker compose up -d --build
+# http://localhost:8081
+# Swagger: /swagger-ui.html</pre></div>
+        <div class="panel"><h3>Tests</h3>
+<pre class="code">cd backend && mvn verify      # needs Docker
+cd frontend && npx ng test --watch=false</pre></div>
+      </div>
+      <p>Demo users when seeding is on: <code>admin@bloodnet.local</code>, <code>staff1@bloodnet.local</code> (Central), <code>staff2@bloodnet.local</code> (Eastside), <code>hospital@bloodnet.local</code>. The password is <code>SEED_PASSWORD</code> in <code>.env</code>.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+// Interview questions. cat = topic chip; ref = where to point in the code.
+const QA = [
+  // ---------------- architecture
+  { cat: "Architecture", q: "Why a modular monolith and not microservices?",
+    a: "<p>One team, one deployable, and the most important operation (reserving units for a request) has to be a single ACID transaction. With microservices I would need a saga with compensation just to reserve blood. Modules give the same separation in the code, Spring Modulith checks it, and a module can still be pulled out later (the plan's Phase 9 does that for notifications).</p>" },
+  { cat: "Architecture", q: "What is Spring Modulith and what does it do here?", ref: "ModularityTest",
+    a: "<p>It treats each top-level package as a module: classes in the module's top package are its API, sub-packages are private. <code>ApplicationModules.verify()</code> fails if a module uses another's internals or if there's a cycle. I proved it by adding a class in <code>donor</code> that used <code>inventory.internal.BloodUnit</code>; the build failed. It also writes PlantUML module diagrams.</p>" },
+  { cat: "Architecture", q: "How did you avoid cycles between modules?",
+    a: "<p>Transfer only publishes events; inventory listens. So inventory depends on transfer and not the other way round. Nearby search lives in inventory and the frontend calls it directly instead of going through transfer.</p>" },
+  { cat: "Architecture", q: "Why are events synchronous for stock but async for notifications?", ref: "TransferStockListener, NotificationListeners",
+    a: "<p>Stock must move together with the transfer status, so it's a plain <code>@EventListener</code> in the same transaction. If dispatch finds too few units, the exception rolls back DISPATCHED too, and there's a test for that. A notification is a side effect, so it uses <code>@ApplicationModuleListener</code>: async, after commit, own transaction. A notification bug can't undo an allocation.</p>" },
+  { cat: "Architecture", q: "What happens to an async event if the app crashes?",
+    a: "<p>The Modulith JDBC registry stores each event in <code>EVENT_PUBLICATION</code> in the same transaction as the business change. That's the transactional outbox pattern. Unfinished ones are resubmitted on restart.</p>" },
+  { cat: "Architecture", q: "Why not Kafka or RabbitMQ from the start?",
+    a: "<p>Everything runs in one JVM, so in-process events are enough and there's no broker to operate. A broker makes sense once a piece runs in another process, which is Phase 9.</p>" },
+  { cat: "Architecture", q: "Why are banks in inventory and hospitals in request?",
+    a: "<p>Banks hold the stock and the nearby search counts units, so they sit with inventory. Hospitals only matter for requests. A separate directory module for two lookup tables wasn't worth it.</p>" },
+
+  // ---------------- concurrency
+  { cat: "Concurrency", q: "Walk me through allocate().", ref: "AllocationService.allocate, UnitSql.lockAvailable",
+    a: "<ul><li>Lock the request row with <code>FOR UPDATE</code>.</li><li>Look up compatible donor groups (cached table).</li><li>For each group, exact first: select free units ordered by expiry, <code>LIMIT n FOR UPDATE SKIP LOCKED</code>.</li><li>Mark them RESERVED for 2 h, write <code>request_allocation</code> rows, update the request, commit.</li></ul>" },
+  { cat: "Concurrency", q: "What does SKIP LOCKED do, and why not plain FOR UPDATE?",
+    a: "<p>Plain <code>FOR UPDATE</code> waits for rows someone else locked; 50 requests would queue on the same units and then find them taken. <code>SKIP LOCKED</code> moves on to the next free unit, so parallel allocations take different units without waiting. It's the usual \"queue table in a database\" pattern.</p>" },
+  { cat: "Concurrency", q: "If SKIP LOCKED separates requests, why lock the request row too?",
+    a: "<p>SKIP LOCKED keeps <em>different</em> requests apart. Two threads allocating the <em>same</em> request could both read \"needs 5\" and reserve 10. The row lock makes the second wait; it then sees RESERVED and gets 409. Test: 50 threads on one 5-unit request gives exactly 5 reserved and 49 conflicts.</p>" },
+  { cat: "Concurrency", q: "Why READ_COMMITTED instead of MySQL's default?",
+    a: "<p>REPEATABLE_READ adds gap/next-key locks on range scans. Those block inserts into the gaps (new donations) and are a common cause of deadlocks. READ_COMMITTED locks only matching rows. I lock every row I change explicitly, so I don't need more.</p>" },
+  { cat: "Concurrency", q: "Tell me about a bug the concurrency test found.",
+    a: "<p>The first query used <code>ORDER BY (blood_group = :preferred) DESC, expires_at</code>. That expression can't use the index, so MySQL does a filesort, and InnoDB locks every row it reads before sorting and LIMIT. The first transaction locked all 60 units and the others skipped them all: 3 of 60 reserved. Fix: one query per blood group so the index gives expiry order and InnoDB stops after LIMIT rows. 60 of 60 after. A single-threaded test would never have shown it.</p>" },
+  { cat: "Concurrency", q: "How exactly does the test prove no unit is given twice?", ref: "AllocationConcurrencyIT",
+    a: "<p>Real MySQL in Testcontainers, 80 units (60 compatible), 50 requests × 2. A <code>CountDownLatch</code> starts all threads at once. It asserts: no unit has two active allocation rows; total reserved = 60; none of the 20 A+ units touched; sum of request counters = RESERVED rows; each unit's <code>request_id</code> matches its allocation row; no exceptions.</p>" },
+  { cat: "Concurrency", q: "Optimistic vs pessimistic locking: where do you use each?",
+    a: "<p>Pessimistic where collisions are expected and retries are wasteful: allocation, transfers, recording a donation. Optimistic (<code>@Version</code>) for rare single-row edits like discarding a unit; a conflict becomes a 409 asking the user to retry.</p>" },
+  { cat: "Concurrency", q: "Does this still work with two app instances?",
+    a: "<p>Yes. The locks are in MySQL, not in the JVM. Scheduled jobs use ShedLock so each runs on one instance.</p>" },
+  { cat: "Concurrency", q: "Can allocate() deadlock?",
+    a: "<p>The request row is always locked first and units are locked in index order, so lock order is consistent. If MySQL still picks a deadlock victim, Spring raises <code>CannotAcquireLockException</code>, which the handler returns as 409. Automatic retry with backoff would be the next step if it happened often.</p>" },
+  { cat: "Concurrency", q: "How does the 2-hour reservation timeout work?", ref: "ReservationTimeoutJob",
+    a: "<p>A job every minute finds requests whose <code>reserved_until</code> has passed. Each one is released in its own transaction, re-checked under the row lock in case it was issued meanwhile. Units go back to AVAILABLE, the request back to PENDING, and both sides are notified.</p>" },
+  { cat: "Concurrency", q: "Why lock the donor row when recording a donation?",
+    a: "<p>Otherwise two staff recording a donation for the same person at the same moment would both pass the 90-day check.</p>" },
+
+  // ---------------- database
+  { cat: "Database", q: "Why Flyway and ddl-auto=validate?",
+    a: "<p>Schema changes are reviewed SQL files with versions. Hibernate only checks entities against the tables, so a mismatch stops startup instead of quietly altering production.</p>" },
+  { cat: "Database", q: "Why native SQL in some places instead of JPA?",
+    a: "<p>JPQL has no <code>SKIP LOCKED</code>, and bulk changes (expire 500 units) are one UPDATE instead of loading 500 entities. Reads and simple edits still use repositories.</p>" },
+  { cat: "Database", q: "Explain the allocation index.",
+    a: "<p><code>(bank_id, component_type, status, blood_group, expires_at)</code>: equality on the first four, then rows come out in expiry order. That's what lets <code>LIMIT … SKIP LOCKED</code> stop early and lock only what it returns.</p>" },
+  { cat: "Database", q: "How is blood compatibility stored?",
+    a: "<p>A table generated in V2 from two SQL rules (red-cell rule and reverse-ABO plasma rule): 126 rows, no hand typing. Cached in memory because it only changes with a migration. A test checks that O− red cells accepts only O− and that AB+ accepts all 8.</p>" },
+  { cat: "Database", q: "How does the nearby search work, and how would it scale?",
+    a: "<p><code>ST_Distance_Sphere(POINT(lng, lat), POINT(:lng, :lat))</code> gives metres; filter by radius, order by distance, and count compatible stock in a subquery. For thousands of banks: a bounding-box prefilter or a SPATIAL index on a POINT SRID 4326 column.</p>" },
+  { cat: "Database", q: "Why keep everything in UTC?",
+    a: "<p>So expiry times don't shift with server time zones. I actually hit this: the test connection lacked <code>connectionTimeZone=UTC</code>, JDBC wrote IST while Hibernate wrote UTC, and the timeout test failed. Fixed in the URL, and the JVM is pinned to UTC.</p>" },
+  { cat: "Database", q: "What is stock_summary and why does it exist?",
+    a: "<p>A small table of counts per bank/group/component, rebuilt every minute. The dashboard polls every 60 s, so a hundred open dashboards read a tiny table instead of each running a GROUP BY over every unit.</p>" },
+  { cat: "Database", q: "Why have a request_allocation table when blood_unit already has request_id?",
+    a: "<p>It keeps history (released reservations stay with <code>released_at</code> set) and lets the test check the real invariant: at most one active allocation per unit.</p>" },
+  { cat: "Database", q: "Why store enums as strings?",
+    a: "<p>Readable in SQL, and reordering the Java enum can't corrupt existing data like ordinal storage would.</p>" },
+
+  // ---------------- spring
+  { cat: "Spring", q: "How does @Transactional work, and what's the self-invocation trap?",
+    a: "<p>Spring wraps the bean in a proxy that opens and commits the transaction. Calling another <code>@Transactional</code> method on <code>this</code> skips the proxy. That's why the timeout job calls <code>allocation.releaseIfExpired(id)</code> on a different bean, so each request gets its own transaction.</p>" },
+  { cat: "Spring", q: "What does Propagation.MANDATORY do and why use it?", ref: "UnitAllocator",
+    a: "<p>It requires an existing transaction and throws if there's none. Reserving units outside the request's locked transaction would be a bug, so it fails fast.</p>" },
+  { cat: "Spring", q: "How does the audit log work?", ref: "AuditAspect",
+    a: "<p><code>@Audited(\"ALLOCATE_REQUEST\")</code> plus an <code>@Around</code> aspect writing actor, action, args, outcome and error. It's ordered outside <code>@Transactional</code>, so it writes after the business transaction ends: rolled-back calls are still recorded and a thread never holds two DB connections.</p>" },
+  { cat: "Spring", q: "How are errors returned to the client?", ref: "GlobalExceptionHandler",
+    a: "<p>As RFC 7807 problem+json: 404 not found, 409 conflict, 422 business rule, 400 validation (with a per-field <code>errors</code> map), 403 forbidden, 500 with no stack trace.</p>" },
+  { cat: "Spring", q: "400 vs 409 vs 422?",
+    a: "<p>400: the request is malformed (bad phone format). 422: valid shape but breaks a business rule (donated 30 days ago). 409: clashes with current state (already issued, changed by someone else).</p>" },
+  { cat: "Spring", q: "What is ShedLock?",
+    a: "<p><code>@Scheduled</code> fires on every instance. ShedLock keeps a row per job; an instance must grab it before running. <code>lockAtMostFor</code> frees it if the instance dies, and <code>usingDbTime()</code> avoids clock differences between servers.</p>" },
+  { cat: "Spring", q: "What does open-in-view: false change?",
+    a: "<p>The Hibernate session isn't kept open while the response is written. All DB work happens in service transactions, so there are no hidden lazy-loading queries from controllers or JSON serialization.</p>" },
+  { cat: "Spring", q: "How are logs made traceable?",
+    a: "<p>A filter puts an <code>X-Request-Id</code> into the MDC and the JWT filter adds the user, so every line shows both. In the <code>prod</code> profile Spring Boot 3.4 writes ECS JSON logs.</p>" },
+  { cat: "Spring", q: "What does Actuator expose here?",
+    a: "<p>Health with liveness/readiness (the Docker healthcheck uses readiness), info and metrics. Everything except health and info needs ADMIN.</p>" },
+
+  // ---------------- security
+  { cat: "Security", q: "Walk me through login and an authenticated call.",
+    a: "<p>POST <code>/api/auth/login</code> → BCrypt check → HS256 JWT (8 h) with id, email, role, bank/hospital id. Angular stores it; an interceptor adds <code>Authorization: Bearer …</code>. <code>JwtAuthFilter</code> checks signature, expiry and issuer and sets the user in the SecurityContext. No server session.</p>" },
+  { cat: "Security", q: "Why JWT and not server sessions?",
+    a: "<p>Any instance can serve any request, with no session store or sticky sessions. The trade-off is that a token can't be revoked before it expires; short access tokens with refresh tokens, or a denylist, would fix that.</p>" },
+  { cat: "Security", q: "How do you stop staff from touching another bank's data?",
+    a: "<p><code>@PreAuthorize</code> handles roles. <code>BankAccess.check(bankId)</code> in services handles the bank, because for \"allocate request 42\" the bank is known only after loading the request. Tests check that the other bank's staff get 403.</p>" },
+  { cat: "Security", q: "Why is CSRF disabled? Isn't that risky?",
+    a: "<p>CSRF relies on the browser sending cookies automatically. Here the token is in a header that our JavaScript adds, so a forged request from another site can't include it. If the token moved into a cookie, CSRF protection would have to come back.</p>" },
+  { cat: "Security", q: "Where is the token stored on the frontend, and what's the risk?",
+    a: "<p><code>sessionStorage</code>. An XSS bug could read it; Angular escapes template output by default, which limits that. An httpOnly cookie resists XSS better but brings back CSRF, so it's a trade-off either way.</p>" },
+  { cat: "Security", q: "How do you prevent user enumeration on login?",
+    a: "<p>Same error for unknown email and wrong password, and an unknown email still runs a BCrypt check against a dummy hash so the timing is the same.</p>" },
+  { cat: "Security", q: "Where do secrets live?",
+    a: "<p>Environment variables. <code>JWT_SECRET</code> must be at least 256 bits or the app refuses to start. <code>.env</code> is git-ignored; <code>.env.example</code> is committed.</p>" },
+
+  // ---------------- domain
+  { cat: "Domain", q: "What happens when a donation is recorded?",
+    a: "<p>One transaction: lock donor, check age and 90-day gap, save donation, update last donation date, create one unit per component with expiry = collection + shelf life.</p>" },
+  { cat: "Domain", q: "In what order are units picked?",
+    a: "<p>Exact blood group first, so O− (the universal donor) is saved for when it's really needed, then first-expired-first-out so units get used before they go off.</p>" },
+  { cat: "Domain", q: "Who can press which transfer button?",
+    a: "<p>The sending bank approves, rejects and dispatches; the receiving bank confirms receipt; either can cancel before dispatch. The API returns <code>allowedNext</code>, the UI filters by side, and the server checks again.</p>" },
+  { cat: "Domain", q: "What does the rebalance job suggest?",
+    a: "<p>Units expiring within 72 h at one bank that a bank within 50 km is short of (fewer than 5 of that group/component). Insert-ignore with a unique key keeps re-runs from duplicating suggestions.</p>" },
+
+  // ---------------- testing
+  { cat: "Testing", q: "What kinds of tests are there?",
+    a: "<ul><li>Unit: eligibility rules, request state changes, transfer transitions, JWT.</li><li>Architecture: Modulith verify.</li><li>Integration on MySQL: full HTTP flows with real JWTs, plus the concurrency test.</li><li>Angular: component and pipe tests.</li></ul>" },
+  { cat: "Testing", q: "Why Testcontainers instead of H2?",
+    a: "<p>H2 doesn't behave like MySQL for SKIP LOCKED, gap locks or <code>ST_Distance_Sphere</code>. A concurrency test on H2 would prove nothing about production.</p>" },
+  { cat: "Testing", q: "Surefire vs failsafe?",
+    a: "<p>Surefire runs <code>*Test</code> in <code>mvn test</code> (fast, no Docker). Failsafe runs <code>*IT</code> in <code>mvn verify</code>. CI runs verify and adds the concurrency table to the job summary.</p>" },
+  { cat: "Testing", q: "How do you test async notifications without flaky tests?",
+    a: "<p>Poll the notification table for up to 5 seconds. The listener runs after commit on another thread, so asserting immediately would sometimes fail.</p>" },
+
+  // ---------------- angular
+  { cat: "Angular", q: "Why standalone components?",
+    a: "<p>No NgModules; each component lists its own imports. Routes use <code>loadComponent</code>, so each screen is its own chunk. The initial download is about 141 KB gzipped.</p>" },
+  { cat: "Angular", q: "Signals or RxJS: when do you use which?",
+    a: "<p>Signals for component state (rows, loading, computed totals). RxJS for HTTP and polling: the dashboard combines the bank selector with <code>interval(60000)</code>, and <code>switchMap</code> cancels an old request so a slow response can't overwrite newer data.</p>" },
+  { cat: "Angular", q: "What do the interceptors do?",
+    a: "<p><code>jwtInterceptor</code> adds the token to <code>/api</code> calls. <code>errorInterceptor</code> handles errors in one place: a 401 logs out and goes to login, anything else shows the server's message in a snackbar.</p>" },
+  { cat: "Angular", q: "Are route guards security?",
+    a: "<p>No, they only shape the UI: <code>authGuard</code>, <code>roleGuard</code>, and <code>homeGuard</code> (sends <code>/</code> to the role's home). Anyone can call the API directly; the server enforces access.</p>" },
+  { cat: "Angular", q: "Why does the dashboard poll instead of using WebSockets?",
+    a: "<p>Stock changes slowly and a minute of delay is fine. Polling a small table is simple and cheap; WebSockets or SSE would be the upgrade if live updates mattered.</p>" },
+
+  // ---------------- devops
+  { cat: "DevOps", q: "Explain the backend Dockerfile.",
+    a: "<p>Multi-stage: Maven + JDK builds the jar, which is split into Spring Boot layers. The runtime is a JRE-only Alpine image with a non-root user. A code change only rebuilds the small application layer. It has a readiness healthcheck and <code>MaxRAMPercentage</code> so the JVM respects container memory.</p>" },
+  { cat: "DevOps", q: "Why put nginx in front?",
+    a: "<p>It serves the Angular build (long cache for hashed files, no cache for index.html), falls back to index.html for client-side routes, and proxies <code>/api</code>. Same origin in production means no CORS.</p>" },
+  { cat: "DevOps", q: "What does CI do?",
+    a: "<p>GitHub Actions, two jobs. Backend: JDK 17 and <code>mvn verify</code>, which includes the Testcontainers tests since runners have Docker. Frontend: <code>npm ci</code>, production build, headless tests. Reports and Modulith docs are uploaded.</p>" },
+
+  // ---------------- scaling
+  { cat: "Scaling", q: "What would you change at a much larger scale?",
+    a: "<ul><li>Read replicas for reports and dashboard; allocation stays on the primary.</li><li>Shard or partition <code>blood_unit</code> by bank if one bank became very hot.</li><li>Move notifications out behind RabbitMQ; the outbox is already there.</li><li>Refresh tokens and revocation; rate-limit login.</li><li>Spatial index for nearby search.</li><li>Retry with backoff on lock exceptions.</li><li>Archive old audit and allocation rows.</li></ul>" },
+  { cat: "Scaling", q: "Tell me about a bug you fixed (behavioural).",
+    a: "<p>Use the SKIP LOCKED story: what I expected, what the test showed (3 of 60), how I worked out the cause (InnoDB locks rows during the filesort before LIMIT), the fix (one indexed query per group), and the result (60 of 60, with the test kept as a guard). Backups: the Docker 29 / Testcontainers version mismatch and the UTC vs IST bug.</p>" },
+];
+
+const list = document.getElementById("qa-list");
+const chipsEl = document.getElementById("qa-chips");
+const search = document.getElementById("qa-search");
+const openAll = document.getElementById("qa-open");
+const countEl = document.getElementById("qa-count");
+const cats = ["All", ...new Set(QA.map(x => x.cat))];
+let active = "All";
+
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+function plain(html) { const d = document.createElement("div"); d.innerHTML = html; return d.textContent.toLowerCase(); }
+QA.forEach(x => { x.text = (x.q + " " + plain(x.a) + " " + (x.ref || "")).toLowerCase(); });
+
+cats.forEach(c => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = c;
+  b.setAttribute("aria-pressed", String(c === active));
+  b.addEventListener("click", () => {
+    active = c;
+    chipsEl.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", String(x.textContent === c)));
+    render();
+  });
+  chipsEl.appendChild(b);
+});
+
+function render() {
+  const term = search.value.trim().toLowerCase();
+  const rows = QA.filter(x => (active === "All" || x.cat === active) && (!term || x.text.includes(term)));
+  list.innerHTML = rows.length ? rows.map(x => `
+    <details${openAll.checked ? " open" : ""}>
+      <summary><span>${esc(x.q)}</span><span class="cat">${esc(x.cat)}</span></summary>
+      <div class="a">${x.a}${x.ref ? `<div class="ref">Code: ${esc(x.ref)}</div>` : ""}</div>
+    </details>`).join("") : `<div class="empty">No questions match "${esc(term)}".</div>`;
+  countEl.textContent = `${rows.length} of ${QA.length} questions`;
+}
+search.addEventListener("input", render);
+openAll.addEventListener("change", render);
+render();
+</script>

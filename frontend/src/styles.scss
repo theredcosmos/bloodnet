@@ -1,0 +1,63 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$primary: mat.define-palette(mat.$red-palette, 800, 600, 900);
+$accent: mat.define-palette(mat.$blue-grey-palette, 700);
+$warn: mat.define-palette(mat.$deep-orange-palette);
+
+$theme: mat.define-light-theme((
+  color: (primary: $primary, accent: $accent, warn: $warn),
+  typography: mat.define-typography-config(),
+  density: -1,
+));
+
+@include mat.all-component-themes($theme);
+
+:root {
+  --bn-red: #b71c1c;
+  --bn-red-dark: #7f0000;
+  --bn-bg: #f6f4f4;
+  --bn-border: #e3dede;
+  --bn-muted: #6b6363;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--bn-bg);
+  color: #222;
+}
+
+.page { padding: 24px; max-width: 1400px; }
+.page-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 16px;
+  h1 { margin: 0; font-size: 22px; font-weight: 500; }
+}
+.muted { color: var(--bn-muted); font-size: 13px; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 8px; }
+.filters mat-form-field { width: 170px; }
+.card { background: #fff; border: 1px solid var(--bn-border); border-radius: 8px; padding: 16px; }
+.grid { display: grid; gap: 16px; }
+.table-wrap { background: #fff; border: 1px solid var(--bn-border); border-radius: 8px; overflow: auto; }
+table.mat-mdc-table { width: 100%; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+// status chips used across tables
+.chip {
+  display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;
+  background: #eceff1; color: #37474f; white-space: nowrap;
+  &.AVAILABLE, &.RECEIVED, &.ISSUED { background: #e8f5e9; color: #1b5e20; }
+  &.RESERVED, &.PARTIALLY_RESERVED, &.APPROVED { background: #fff8e1; color: #8d6e00; }
+  &.IN_TRANSIT, &.DISPATCHED, &.REQUESTED, &.PENDING { background: #e3f2fd; color: #0d47a1; }
+  &.EXPIRED, &.DISCARDED, &.REJECTED, &.CANCELLED { background: #fbe9e7; color: #b71c1c; }
+  &.EMERGENCY { background: #b71c1c; color: #fff; }
+  &.URGENT { background: #ffe0b2; color: #e65100; }
+}
+.group-badge {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 24px;
+  border-radius: 6px; background: var(--bn-red); color: #fff; font-weight: 600; font-size: 13px;
+}

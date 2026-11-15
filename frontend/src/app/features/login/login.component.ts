@@ -1,0 +1,78 @@
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { AuthService } from '../../core/auth.service';
+
+@Component({
+  selector: 'app-login',
+  standalone: true,
+  imports: [ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule,
+    MatProgressBarModule],
+  template: `
+    <div class="wrap">
+      <mat-card class="box">
+        @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+        <div class="brand"><mat-icon>bloodtype</mat-icon> BloodNet</div>
+        <p class="muted">Blood bank network: stock, requests and transfers</p>
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <mat-form-field class="full">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" type="email" autocomplete="username" />
+          </mat-form-field>
+          <mat-form-field class="full">
+            <mat-label>Password</mat-label>
+            <input matInput formControlName="password" type="password" autocomplete="current-password" />
+          </mat-form-field>
+          @if (error()) { <div class="error">{{ error() }}</div> }
+          <button mat-flat-button color="primary" class="full" [disabled]="form.invalid || loading()">Sign in</button>
+        </form>
+      </mat-card>
+    </div>
+  `,
+  styles: [`
+    .wrap { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #b71c1c, #4a0000); padding: 16px; }
+    .box { width: 100%; max-width: 380px; padding: 24px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 600; color: var(--bn-red); }
+    .full { width: 100%; }
+    form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+    .error { color: #b71c1c; font-size: 13px; }
+  `],
+})
+export class LoginComponent {
+  private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
+  readonly loading = signal(false);
+  readonly error = signal('');
+
+  readonly form = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+  });
+
+  constructor() {
+    if (this.auth.isLoggedIn()) {
+      this.router.navigateByUrl(this.auth.homeUrl());
+    }
+  }
+
+  submit(): void {
+    const { email, password } = this.form.getRawValue();
+    this.loading.set(true);
+    this.error.set('');
+    this.auth.login(email, password).subscribe({
+      next: () => this.router.navigateByUrl(this.auth.homeUrl()),
+      error: () => {
+        this.loading.set(false);
+        this.error.set('Wrong email or password.');
+      },
+    });
+  }
+}

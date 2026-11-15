@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: bloodnet
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/bloodnet?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&rewriteBatchedStatements=true}
+    username: ${DB_USER:bloodnet}
+    password: ${DB_PASSWORD:bloodnet}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+  jpa:
+    open-in-view: false            # no lazy loading in views; every DB access happens inside a service transaction
+    hibernate:
+      ddl-auto: validate           # Flyway owns the schema; Hibernate only checks entities match it
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  modulith:
+    events:
+      jdbc:
+        schema-initialization:
+          enabled: false           # event_publication table is created by Flyway V1
+      republish-outstanding-events-on-restart: true
+  jackson:
+    default-property-inclusion: non_null
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-}] [%X{user:-}] %logger{36} - %msg%n"
+
+bloodnet:
+  jwt:
+    # Dev-only default. Production MUST override with JWT_SECRET (base64, >= 32 bytes).
+    secret: ${JWT_SECRET:ZGV2LW9ubHktc2VjcmV0LWNoYW5nZS1tZS1pbi1wcm9kdWN0aW9uLTMyYnl0ZXMh}
+    ttl: PT8H
+  reservation:
+    ttl: PT2H
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200}
+  seed:
+    enabled: ${SEED_DEMO_USERS:true}
+    password: ${SEED_PASSWORD:Bloodnet@123}
+  scheduling:
+    enabled: true
+  jobs:
+    expiry-cron: "0 */10 * * * *"
+    rebalance-cron: "0 15 * * * *"
+    reservation-timeout-delay: PT1M
+    stock-summary-delay: PT1M
+  rebalance:
+    horizon-hours: 72
+    radius-km: 50
+    low-stock-threshold: 5
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+logging:
+  structured:
+    format:
+      console: ecs                 # JSON logs (Elastic Common Schema) for log aggregation
+bloodnet:
+  seed:
+    enabled: ${SEED_DEMO_USERS:false}

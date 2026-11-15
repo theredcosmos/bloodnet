@@ -1,0 +1,11 @@
+.env
+.tmp*/
+.tmp-*.log
+.ngnew.log
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+*.iml
+.idea/
+.vscode/

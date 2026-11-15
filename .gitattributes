@@ -1,0 +1,5 @@
+# Keep LF everywhere: these files run in Linux containers and CI.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jar binary

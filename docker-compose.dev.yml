@@ -1,0 +1,22 @@
+# Local development: only MySQL. Run the backend from your IDE / mvn and the frontend with `npm start`.
+#   docker compose -f docker-compose.dev.yml up -d
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bloodnet-mysql-dev
+    environment:
+      MYSQL_DATABASE: bloodnet
+      MYSQL_USER: bloodnet
+      MYSQL_PASSWORD: bloodnet
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-dev-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ubloodnet", "-pbloodnet"]
+      interval: 5s
+      retries: 20
+
+volumes:
+  mysql-dev-data:
