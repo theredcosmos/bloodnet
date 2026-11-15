@@ -2,9 +2,21 @@
 
 @include mat.core();
 
-$primary: mat.define-palette(mat.$red-palette, 800, 600, 900);
-$accent: mat.define-palette(mat.$blue-grey-palette, 700);
-$warn: mat.define-palette(mat.$deep-orange-palette);
+// Muted brick red instead of Material's bright red: still reads as "blood", easier on the eyes.
+$bn-brick: (
+  50: #f8eeee, 100: #eed6d6, 200: #ddb0b0, 300: #c98989, 400: #b56b6b,
+  500: #a05252, 600: #8f4646, 700: #7d3b3b, 800: #6b3131, 900: #512424,
+  A100: #f3c9c9, A200: #e09a9a, A400: #c46a6a, A700: #9c4444,
+  contrast: (
+    50: rgba(black, 0.87), 100: rgba(black, 0.87), 200: rgba(black, 0.87), 300: rgba(black, 0.87),
+    400: white, 500: white, 600: white, 700: white, 800: white, 900: white,
+    A100: rgba(black, 0.87), A200: rgba(black, 0.87), A400: white, A700: white,
+  )
+);
+
+$primary: mat.define-palette($bn-brick, 700, 400, 900);
+$accent: mat.define-palette(mat.$blue-grey-palette, 600);
+$warn: mat.define-palette(mat.$deep-orange-palette, 700);
 
 $theme: mat.define-light-theme((
   color: (primary: $primary, accent: $accent, warn: $warn),
@@ -15,11 +27,14 @@ $theme: mat.define-light-theme((
 @include mat.all-component-themes($theme);
 
 :root {
-  --bn-red: #b71c1c;
-  --bn-red-dark: #7f0000;
-  --bn-bg: #f6f4f4;
-  --bn-border: #e3dede;
-  --bn-muted: #6b6363;
+  --bn-red: #7d3b3b;        // accent only: brand, active nav, primary buttons
+  --bn-red-dark: #5e2a2a;
+  --bn-red-soft: #f5e9e9;   // tinted backgrounds (badges, selected rows, active nav)
+  --bn-sidebar: #fbf9f8;
+  --bn-bg: #f5f4f3;
+  --bn-border: #e6e1df;
+  --bn-muted: #6e6866;
+  --bn-text: #2a2626;
 }
 
 html, body { height: 100%; }
@@ -27,7 +42,7 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--bn-bg);
-  color: #222;
+  color: var(--bn-text);
 }
 
 .page { padding: 24px; max-width: 1400px; }
@@ -53,11 +68,12 @@ table.mat-mdc-table { width: 100%; }
   &.AVAILABLE, &.RECEIVED, &.ISSUED { background: #e8f5e9; color: #1b5e20; }
   &.RESERVED, &.PARTIALLY_RESERVED, &.APPROVED { background: #fff8e1; color: #8d6e00; }
   &.IN_TRANSIT, &.DISPATCHED, &.REQUESTED, &.PENDING { background: #e3f2fd; color: #0d47a1; }
-  &.EXPIRED, &.DISCARDED, &.REJECTED, &.CANCELLED { background: #fbe9e7; color: #b71c1c; }
-  &.EMERGENCY { background: #b71c1c; color: #fff; }
+  &.EXPIRED, &.DISCARDED, &.REJECTED, &.CANCELLED { background: #f6ebe9; color: #8a3a32; }
+  &.EMERGENCY { background: #8a3a32; color: #fff; }
   &.URGENT { background: #ffe0b2; color: #e65100; }
 }
 .group-badge {
   display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 24px;
-  border-radius: 6px; background: var(--bn-red); color: #fff; font-weight: 600; font-size: 13px;
+  border-radius: 6px; background: var(--bn-red-soft); color: var(--bn-red); border: 1px solid #e8d3d3;
+  font-weight: 600; font-size: 13px;
 }

@@ -139,13 +139,13 @@ import { BLOOD_GROUPS, Donation, Donor } from '../../core/models';
     .layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
     @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
     tr.mat-mdc-row { cursor: pointer; }
-    tr.selected { background: #fff1f1; }
+    tr.selected { background: var(--bn-red-soft); }
     .side h3 { display: flex; gap: 8px; align-items: center; margin: 0; }
     h4 { margin: 16px 0 8px; font-weight: 500; }
     .full { width: 100%; }
     .checks { display: flex; flex-direction: column; margin-bottom: 12px; }
     .unit { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f2eded; }
-    .warn { color: #b71c1c; font-size: 13px; }
+    .warn { color: var(--bn-red); font-size: 13px; }
   `],
 })
 export class DonorsComponent implements OnInit {

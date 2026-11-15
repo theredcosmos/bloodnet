@@ -1,5 +1,7 @@
 package com.bloodnet.shared;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -64,6 +66,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail integrity(DataIntegrityViolationException ex) {
         log.warn("integrity violation: {}", ex.getMostSpecificCause().getMessage());
         return problem(HttpStatus.CONFLICT, "Duplicate or invalid reference", "The data conflicts with an existing record");
+    }
+
+    /** @Min/@Max etc. on query parameters (controllers marked @Validated) - a client error, not a 500. */
+    @ExceptionHandler(ConstraintViolationException.class)
+    ProblemDetail constraintViolation(ConstraintViolationException ex) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (ConstraintViolation<?> v : ex.getConstraintViolations()) {
+            String path = v.getPropertyPath().toString();
+            errors.putIfAbsent(path.substring(path.lastIndexOf('.') + 1), v.getMessage());
+        }
+        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, "Validation failed", "One or more parameters are invalid");
+        pd.setProperty("errors", errors);
+        return pd;
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

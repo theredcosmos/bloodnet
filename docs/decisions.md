@@ -44,6 +44,20 @@ One line per choice and the reason. Newest problems found while building are at 
 - **First admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD` at startup**: a fresh install always has someone who can log in and add users; it does nothing once the account exists.
 - **Admin sign-up page gated by `ADMIN_SIGNUP_CODE`**: an open "sign up as admin" form would let anyone become admin. Off when the code is empty or under 12 chars; compared in constant time; passed inside a record so the audit aspect never logs it. Staff and hospital users are still created only by an admin.
 
+## Public "find blood" page
+- **Same app, not a separate site**: the stock, compatibility rules and distance search already live here; the public page is a read-only view of them.
+- **No login for the public**: people in an emergency only need to read; staff and hospitals keep their logins.
+- **Only counts, bank details and "stock last changed" leave the server**: no donor, patient, request or unit data. A test asserts the response doesn't contain them.
+- **Counts include compatible groups** for the chosen patient group, so "O+" also counts O- red cells.
+- **Rate limit 60 requests/min per client on `/api/public/**`**, in memory per instance, keyed on nginx's `X-Real-IP` (the app port isn't published). Shared limits would need Redis or nginx `limit_req`.
+- **30-second `Cache-Control`** on public responses: fresh enough, and absorbs bursts.
+- **Site root sends visitors to `/find`**, and signed-in users to their own home page.
+- **Real-world data**: there's no documented public API for live stock (e-RaktKosh has a web portal and apps only), so accuracy depends on banks using BloodNet. Directories on data.gov.in could seed bank locations/contacts later.
+- Found while building: out-of-range query params (`lat=999`) returned 500 because `ConstraintViolationException` wasn't mapped; now 400 for every endpoint.
+
+## Look and feel
+- **Muted brick red (#7d3b3b) as an accent only, light sidebar, neutral backgrounds**: the bright red was tiring on the eyes.
+
 ## Frontend
 - **Angular 17 standalone components, no NgModules**: less boilerplate, and lazy loading per route.
 - **Signals for component state, RxJS for HTTP/polling**: signals for simple state, RxJS where streams fit (`switchMap` cancels stale polls).

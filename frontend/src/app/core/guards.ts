@@ -8,6 +8,12 @@ export const authGuard: CanActivateFn = () => {
   return auth.isLoggedIn() && auth.token() ? true : inject(Router).createUrlTree(['/login']);
 };
 
+/** Site root: visitors see the public "find blood" page, signed-in users go to their home page. */
+export const landingGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return inject(Router).createUrlTree([auth.isLoggedIn() && auth.token() ? auth.homeUrl() : '/find']);
+};
+
 /** Empty path -> the logged-in user's home page (staff: dashboard, hospital: portal). */
 export const homeGuard: CanActivateFn = () => {
   const auth = inject(AuthService);

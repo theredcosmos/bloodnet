@@ -21,6 +21,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -78,6 +79,37 @@ class BloodnetFlowIT extends IntegrationTestBase {
         mvc.perform(get("/api/users").header("Authorization", staff1)).andExpect(status().isForbidden());
         mvc.perform(get("/api/auth/me").header("Authorization", staff1))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.role").value("BANK_STAFF"));
+    }
+
+    @Test
+    void publicAvailabilityNeedsNoLoginAndShowsOnlyCounts() throws Exception {
+        String staff1 = login("staff1@bloodnet.local");
+        donate(staff1, registerDonor(staff1, "O_NEG", "9000000006"));
+
+        // an O+ patient can take O- red cells, so bank 1 must show stock for an O+ search
+        String body = mvc.perform(get("/api/public/availability")
+                        .param("lat", "18.5204").param("lng", "73.8567").param("radiusKm", "25")
+                        .param("bloodGroup", "O_POS").param("component", "RED_CELLS"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=30")))
+                .andExpect(jsonPath("$[0].availableUnits").value(org.hamcrest.Matchers.greaterThan(0)))
+                .andExpect(jsonPath("$[0].phone").exists())
+                .andExpect(jsonPath("$[0].stockUpdatedAt").exists())
+                .andReturn().getResponse().getContentAsString();
+        // nothing about donors, units or requests may leak to anonymous users
+        assertThat(body).doesNotContain("unitCode", "donor", "requestId", "9000000006");
+
+        mvc.perform(get("/api/public/banks/{id}", bank1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bank.name").value("Central Blood Bank"))
+                .andExpect(jsonPath("$.stock[?(@.bloodGroup == 'O_NEG' && @.componentType == 'RED_CELLS')].available")
+                        .value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.greaterThanOrEqualTo(1))));
+        mvc.perform(get("/api/public/areas")).andExpect(status().isOk()).andExpect(jsonPath("$[0].city").value("Pune"));
+
+        // bad input is a clean 400, and the rest of the API still needs a token
+        mvc.perform(get("/api/public/availability").param("lat", "999").param("lng", "73.8"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/inventory/units")).andExpect(status().isUnauthorized());
     }
 
     @Test

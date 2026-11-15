@@ -1,10 +1,13 @@
 import { Routes } from '@angular/router';
-import { authGuard, homeGuard, roleGuard } from './core/guards';
+import { authGuard, homeGuard, landingGuard, roleGuard } from './core/guards';
 
 const STAFF = ['ADMIN', 'BANK_STAFF'];
 
 // Every feature is lazy-loaded, so the login page doesn't download the whole app.
 export const routes: Routes = [
+  // public, no login: blood availability near you
+  { path: 'find', loadComponent: () => import('./features/public/find-blood.component').then(m => m.FindBloodComponent) },
+  { path: '', pathMatch: 'full', canActivate: [landingGuard], children: [] },
   { path: 'login', loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent) },
   { path: 'signup', loadComponent: () => import('./features/login/signup.component').then(m => m.SignupComponent) },
   {

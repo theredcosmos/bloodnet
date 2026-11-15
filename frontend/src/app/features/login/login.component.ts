@@ -32,6 +32,7 @@ import { AuthService } from '../../core/auth.service';
           @if (error()) { <div class="error">{{ error() }}</div> }
           <button mat-flat-button color="primary" class="full" [disabled]="form.invalid || loading()">Sign in</button>
         </form>
+        <p class="signup">Looking for blood? <a routerLink="/find">See availability near you</a>, no login needed.</p>
         @if (signupEnabled()) {
           <p class="signup">New administrator? <a routerLink="/signup">Create admin account</a></p>
         }
@@ -39,12 +40,12 @@ import { AuthService } from '../../core/auth.service';
     </div>
   `,
   styles: [`
-    .wrap { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #b71c1c, #4a0000); padding: 16px; }
-    .box { width: 100%; max-width: 380px; padding: 24px; }
+    .wrap { min-height: 100vh; display: grid; place-items: center; background: var(--bn-bg); padding: 16px; }
+    .box { width: 100%; max-width: 380px; padding: 24px; border: 1px solid var(--bn-border); box-shadow: 0 2px 12px rgba(60, 40, 40, .06); }
     .brand { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 600; color: var(--bn-red); }
     .full { width: 100%; }
     form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-    .error { color: #b71c1c; font-size: 13px; }
+    .error { color: var(--bn-red); font-size: 13px; }
     .signup { margin: 16px 0 0; font-size: 13px; text-align: center; }
   `],
 })

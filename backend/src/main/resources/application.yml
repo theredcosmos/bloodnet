@@ -72,6 +72,9 @@ bloodnet:
   # Admin self sign-up page. Off unless a code of 12+ characters is set.
   admin-signup:
     code: ${ADMIN_SIGNUP_CODE:}
+  # Public "find blood" page: requests per client IP per minute.
+  public:
+    requests-per-minute: ${PUBLIC_RATE_LIMIT:60}
   scheduling:
     enabled: true
   jobs:

@@ -198,6 +198,32 @@ export interface RebalanceSuggestion {
   reason: string;
 }
 
+// ---- public "find blood" page (no login)
+export interface PublicBank {
+  bankId: number;
+  name: string;
+  city: string;
+  address?: string;
+  phone?: string;
+  latitude: number;
+  longitude: number;
+  distanceKm: number;
+  availableUnits: number;
+  stockUpdatedAt?: string;
+}
+
+export interface PublicBankStock {
+  bank: PublicBank;
+  stock: { bloodGroup: BloodGroup; componentType: ComponentType; available: number }[];
+}
+
+export interface Area {
+  city: string;
+  latitude: number;
+  longitude: number;
+  banks: number;
+}
+
 export interface AppNotification {
   id: number;
   type: string;

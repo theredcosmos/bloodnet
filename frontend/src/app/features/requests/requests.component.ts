@@ -96,7 +96,7 @@ const VIEWS: Record<string, string[]> = {
   `,
   styles: [`
     .empty { padding: 24px; text-align: center; color: var(--bn-muted); }
-    tr.emergency { box-shadow: inset 4px 0 0 #b71c1c; }
+    tr.emergency { box-shadow: inset 3px 0 0 #a65a52; }
   `],
 })
 export class RequestsComponent implements OnInit {

@@ -103,7 +103,7 @@ import { BLOOD_GROUPS, Bank, COMPONENTS, Dashboard, RebalanceSuggestion, StockCe
     table.matrix { border-collapse: collapse; width: 100%; }
     .matrix th, .matrix td { padding: 10px 12px; border-bottom: 1px solid var(--bn-border); text-align: center; }
     .matrix th { font-weight: 500; color: var(--bn-muted); font-size: 13px; }
-    .matrix td.low { background: #fff1f1; }
+    .matrix td.low { background: #fbf3f2; }
     .exp { margin-left: 6px; font-size: 11px; color: #e65100; }
     .suggestion { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid #f2eded; font-size: 14px; }
     .suggestion span:nth-child(2) { flex: 1; }

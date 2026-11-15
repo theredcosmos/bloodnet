@@ -66,13 +66,13 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     </div>
   `,
   styles: [`
-    .wrap { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #b71c1c, #4a0000); padding: 16px; }
-    .box { width: 100%; max-width: 420px; padding: 24px; }
+    .wrap { min-height: 100vh; display: grid; place-items: center; background: var(--bn-bg); padding: 16px; }
+    .box { width: 100%; max-width: 420px; padding: 24px; border: 1px solid var(--bn-border); box-shadow: 0 2px 12px rgba(60, 40, 40, .06); }
     .brand { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 600; color: var(--bn-red); }
     h2 { margin: 12px 0 4px; font-weight: 500; }
     .full { width: 100%; }
     form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
-    .error { color: #b71c1c; font-size: 13px; }
+    .error { color: var(--bn-red); font-size: 13px; }
   `],
 })
 export class SignupComponent {

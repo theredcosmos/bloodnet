@@ -169,7 +169,7 @@ html { scroll-behavior: smooth; }
 
       <div class="facts">
         <div class="fact"><div class="n">7</div><div class="l">business modules, boundaries checked by a test</div></div>
-        <div class="fact"><div class="n">43</div><div class="l">backend tests passing (29 unit, 14 on real MySQL)</div></div>
+        <div class="fact"><div class="n">47</div><div class="l">backend tests passing (32 unit, 15 on real MySQL)</div></div>
         <div class="fact hl"><div class="n">60 / 60</div><div class="l">units reserved by 50 parallel requests, 0 given twice</div></div>
         <div class="fact"><div class="n">126</div><div class="l">compatibility rules generated from 2 SQL rules</div></div>
         <div class="fact"><div class="n">141 KB</div><div class="l">initial Angular download (gzipped), screens lazy-loaded</div></div>
@@ -215,6 +215,14 @@ flowchart LR
   J[Scheduled jobs<br/>ShedLock] --> S
       </pre></div>
       <p class="cap">One Spring Boot app behind nginx. Stock changes caused by transfers run inside the same transaction; notifications run afterwards.</p>
+
+      <h3>Public: find blood near you (no login)</h3>
+      <ol class="flow">
+        <li><div>A visitor opens the site and lands on <code>/find</code>. It loads straight away with banks in the busiest area; "Use my location" switches to the browser's location.</div></li>
+        <li><div>They pick the patient's blood group, the component and a distance. <code>GET /api/public/availability</code> returns banks within range with live available units, counting every compatible group.</div></li>
+        <li><div>Each bank shows distance, phone (tap to call), directions, when its stock last changed and, on request, the full stock grid. An emergency strip shows 108 and 112.</div></li>
+        <li><div>Nothing private leaves the server, responses are cached for 30 s, and each client gets 60 requests a minute (then <span class="pill warn">429</span>).</div></li>
+      </ol>
 
       <h3>Getting the first admin in</h3>
       <ol class="flow">
@@ -629,6 +637,12 @@ const QA = [
     a: "<p>Same error for unknown email and wrong password, and an unknown email still runs a BCrypt check against a dummy hash so the timing is the same.</p>" },
   { cat: "Security", q: "How does the first admin get in? Why isn't there an open sign-up?", ref: "AdminBootstrap, AuthService.signupAdmin",
     a: "<p>At startup the app creates an admin from <code>ADMIN_EMAIL</code>/<code>ADMIN_PASSWORD</code> if that email isn't registered. There's also a \"Create admin account\" page, but it only works with the server's <code>ADMIN_SIGNUP_CODE</code>: an open admin sign-up would let anyone take over. The code is compared in constant time and kept out of the audit log. Staff and hospital accounts are created by an admin, never self-registered.</p>" },
+  { cat: "Architecture", q: "Why is the public availability page part of the same app and not a separate website?", ref: "PublicController, find-blood.component",
+    a: "<p>The stock, compatibility rules and distance search already live in the inventory module. A separate site would need its own copy of the data or an API to this one anyway. The public page is a read-only view: three GET endpoints under <code>/api/public</code> and one Angular screen, while staff keep the full app.</p>" },
+  { cat: "Security", q: "How do you open data to the public without leaking anything?",
+    a: "<ul><li>Only bank name, address, phone, distance, unit counts and the stock-change time are returned; a test checks donor, unit and request data never appear.</li><li>No login, but 60 requests per minute per client (429 after), keyed on nginx's X-Real-IP since the app port isn't exposed.</li><li>30-second Cache-Control so bursts are absorbed.</li><li>Everything else under /api still needs a JWT.</li></ul>" },
+  { cat: "Domain", q: "Is there a real public API for blood stock you could use?",
+    a: "<p>Not that I could find. India's e-RaktKosh shows stock on its portal and apps but has no documented public API, and studies say many banks update it rarely. data.gov.in has bank directories but not live stock. So the honest model is: data is accurate for banks that use BloodNet, every number shows when it last changed, and users are told to call before travelling.</p>" },
   { cat: "Security", q: "Where do secrets live?",
     a: "<p>Environment variables. <code>JWT_SECRET</code> must be at least 256 bits or the app refuses to start. <code>.env</code> is git-ignored; <code>.env.example</code> is committed.</p>" },
 

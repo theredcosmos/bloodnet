@@ -2,7 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, shareReplay } from 'rxjs';
 import {
-  AllocationResult, AppNotification, Bank, BloodRequest, Dashboard, Donation, Donor, Hospital, NearbyBank, Page,
+  AllocationResult, AppNotification, Area, Bank, BloodRequest, Dashboard, Donation, Donor, Hospital, NearbyBank, Page,
+  PublicBank, PublicBankStock,
   RebalanceSuggestion, Transfer, TransferStep, Unit, User, WastageRow,
 } from './models';
 
@@ -107,6 +108,17 @@ export class ApiService {
   }
   wastage(from: string, to: string, bankId?: number | null) {
     return this.http.get<WastageRow[]>('/api/reports/wastage', { params: params({ from, to, bankId }) });
+  }
+
+  // public page (no token needed)
+  publicAvailability(q: { lat: number; lng: number; radiusKm: number; bloodGroup?: string | null; component?: string | null }) {
+    return this.http.get<PublicBank[]>('/api/public/availability', { params: params(q) });
+  }
+  publicBank(id: number) {
+    return this.http.get<PublicBankStock>(`/api/public/banks/${id}`);
+  }
+  publicAreas() {
+    return this.http.get<Area[]>('/api/public/areas');
   }
 
   // notifications

@@ -88,19 +88,20 @@ const NAV: NavItem[] = [
   `,
   styles: [`
     .container { height: 100vh; }
-    .sidebar { width: 248px; background: var(--bn-red); color: #fff; border: none; display: flex; flex-direction: column; }
-    .brand { display: flex; align-items: center; gap: 10px; padding: 20px 20px 12px; font-size: 20px; font-weight: 600; }
-    .brand mat-icon { font-size: 30px; width: 30px; height: 30px; }
-    .sidebar a.mat-mdc-list-item { --mdc-list-list-item-label-text-color: #fff; --mdc-list-list-item-leading-icon-color: #ffcdd2;
-      margin: 2px 8px; border-radius: 8px; width: auto; }
-    .sidebar a.active { background: var(--bn-red-dark); }
-    .sidebar a.active { --mdc-list-list-item-leading-icon-color: #fff; }
-    .who { margin-top: auto; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.2); font-size: 13px; }
-    .who .role { opacity: .75; font-size: 11px; letter-spacing: .5px; }
+    .sidebar { width: 248px; background: var(--bn-sidebar); color: var(--bn-text); border-right: 1px solid var(--bn-border);
+      display: flex; flex-direction: column; }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 20px 20px 12px; font-size: 20px; font-weight: 600; color: var(--bn-red); }
+    .brand mat-icon { font-size: 28px; width: 28px; height: 28px; }
+    .sidebar a.mat-mdc-list-item { --mdc-list-list-item-label-text-color: var(--bn-text);
+      --mdc-list-list-item-leading-icon-color: var(--bn-muted); margin: 2px 8px; border-radius: 8px; width: auto; }
+    .sidebar a.active { background: var(--bn-red-soft); --mdc-list-list-item-label-text-color: var(--bn-red);
+      --mdc-list-list-item-leading-icon-color: var(--bn-red); }
+    .who { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--bn-border); font-size: 13px; }
+    .who .role { color: var(--bn-muted); font-size: 11px; letter-spacing: .5px; }
     .topbar { background: #fff; border-bottom: 1px solid var(--bn-border); position: sticky; top: 0; z-index: 2; }
     .spacer { flex: 1; }
     .note { padding: 10px 16px; max-width: 340px; font-size: 13px; border-bottom: 1px solid #f0eaea; }
-    .note.unread { background: #fff5f5; }
+    .note.unread { background: var(--bn-red-soft); }
   `],
 })
 export class ShellComponent implements OnInit {

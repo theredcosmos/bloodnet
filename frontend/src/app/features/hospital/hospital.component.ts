@@ -120,7 +120,7 @@ import { BLOOD_GROUPS, BloodRequest, COMPONENTS, Hospital, NearbyBank } from '..
     h3 { margin: 4px 0 12px; font-weight: 500; }
     .bank { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--bn-border);
       border-radius: 8px; margin-bottom: 8px; cursor: pointer; }
-    .bank.chosen { border-color: var(--bn-red); background: #fff5f5; }
+    .bank.chosen { border-color: var(--bn-red); background: var(--bn-red-soft); }
     .bank.empty { opacity: .6; }
     .grow { flex: 1; }
     .count { font-size: 22px; font-weight: 500; }

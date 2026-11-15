@@ -119,7 +119,7 @@ const ACTION_FOR: Partial<Record<TransferStatus, Action>> = {
     .step.done { color: #333; }
     .dot { width: 26px; height: 26px; border-radius: 50%; background: #e0e0e0; display: grid; place-items: center;
       margin: 0 auto 4px; position: relative; z-index: 1; font-weight: 600; }
-    .step.current .dot { box-shadow: 0 0 0 4px #ffcdd2; }
+    .step.current .dot { box-shadow: 0 0 0 4px #ecd9d9; }
     .steps.stopped { opacity: .45; }
   `],
 })
