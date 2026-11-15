@@ -24,7 +24,10 @@ import java.util.List;
         "bloodnet.scheduling.enabled=false",
         "bloodnet.seed.enabled=true",
         "bloodnet.seed.password=Test-Only-Pass1",
-        "spring.datasource.hikari.maximum-pool-size=60"
+        "spring.datasource.hikari.maximum-pool-size=60",
+        "bloodnet.bootstrap-admin.email=boot-admin@test.local",
+        "bloodnet.bootstrap-admin.password=Boot-Admin-Pass1",
+        "bloodnet.admin-signup.code=test-setup-code-1234"
 })
 public abstract class IntegrationTestBase {
 

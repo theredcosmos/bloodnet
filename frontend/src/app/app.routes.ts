@@ -6,6 +6,7 @@ const STAFF = ['ADMIN', 'BANK_STAFF'];
 // Every feature is lazy-loaded, so the login page doesn't download the whole app.
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./features/login/login.component').then(m => m.LoginComponent) },
+  { path: 'signup', loadComponent: () => import('./features/login/signup.component').then(m => m.SignupComponent) },
   {
     path: '',
     canActivate: [authGuard],

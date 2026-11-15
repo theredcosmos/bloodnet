@@ -41,6 +41,8 @@ One line per choice and the reason. Newest problems found while building are at 
 - **Login takes the same time for unknown emails**: a dummy BCrypt check prevents user enumeration by timing.
 - **Token kept in `sessionStorage` on the frontend**: simple, cleared when the tab closes. An httpOnly cookie would resist XSS better but needs CSRF protection back.
 - **Demo users created by the app, password from config**: hashes can't be pre-computed in SQL, and no secret is in source.
+- **First admin from `ADMIN_EMAIL`/`ADMIN_PASSWORD` at startup**: a fresh install always has someone who can log in and add users; it does nothing once the account exists.
+- **Admin sign-up page gated by `ADMIN_SIGNUP_CODE`**: an open "sign up as admin" form would let anyone become admin. Off when the code is empty or under 12 chars; compared in constant time; passed inside a record so the audit aspect never logs it. Staff and hospital users are still created only by an admin.
 
 ## Frontend
 - **Angular 17 standalone components, no NgModules**: less boilerplate, and lazy loading per route.

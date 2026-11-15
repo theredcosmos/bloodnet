@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -12,7 +12,7 @@ import { AuthService } from '../../core/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule,
+  imports: [ReactiveFormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule,
     MatProgressBarModule],
   template: `
     <div class="wrap">
@@ -32,6 +32,9 @@ import { AuthService } from '../../core/auth.service';
           @if (error()) { <div class="error">{{ error() }}</div> }
           <button mat-flat-button color="primary" class="full" [disabled]="form.invalid || loading()">Sign in</button>
         </form>
+        @if (signupEnabled()) {
+          <p class="signup">New administrator? <a routerLink="/signup">Create admin account</a></p>
+        }
       </mat-card>
     </div>
   `,
@@ -42,6 +45,7 @@ import { AuthService } from '../../core/auth.service';
     .full { width: 100%; }
     form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
     .error { color: #b71c1c; font-size: 13px; }
+    .signup { margin: 16px 0 0; font-size: 13px; text-align: center; }
   `],
 })
 export class LoginComponent {
@@ -51,6 +55,7 @@ export class LoginComponent {
 
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly signupEnabled = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -61,6 +66,8 @@ export class LoginComponent {
     if (this.auth.isLoggedIn()) {
       this.router.navigateByUrl(this.auth.homeUrl());
     }
+    // only show the sign-up link when the server has it switched on
+    this.auth.signupStatus().subscribe({ next: s => this.signupEnabled.set(s.adminSignupEnabled), error: () => {} });
   }
 
   submit(): void {

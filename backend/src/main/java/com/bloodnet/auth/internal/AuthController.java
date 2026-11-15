@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -48,6 +49,27 @@ public class AuthController {
     @PostMapping("/auth/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest req) {
         AuthService.LoginResult r = auth.login(req.email(), req.password());
+        return new LoginResponse(r.token().value(), r.token().expiresAt(), UserView.of(r.user()));
+    }
+
+    public record AdminSignupRequest(@NotBlank @Email @Size(max = 160) String email,
+                                     @NotBlank @Size(max = 120) String fullName,
+                                     @NotBlank @Size(min = 8, max = 72) String password,
+                                     @NotBlank @Size(max = 200) String setupCode) {
+    }
+
+    /** Lets the login page decide whether to show the "Create admin account" link. */
+    @GetMapping("/auth/signup-status")
+    public Map<String, Boolean> signupStatus() {
+        return Map.of("adminSignupEnabled", auth.adminSignupEnabled());
+    }
+
+    /** Creates an ADMIN account if the setup code matches, and signs the new admin straight in. */
+    @PostMapping("/auth/signup-admin")
+    @ResponseStatus(HttpStatus.CREATED)
+    public LoginResponse signupAdmin(@Valid @RequestBody AdminSignupRequest req) {
+        AuthService.LoginResult r = auth.signupAdmin(
+                new AuthService.AdminSignup(req.email(), req.fullName(), req.password(), req.setupCode()));
         return new LoginResponse(r.token().value(), r.token().expiresAt(), UserView.of(r.user()));
     }
 

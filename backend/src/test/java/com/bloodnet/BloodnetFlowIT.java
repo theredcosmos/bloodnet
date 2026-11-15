@@ -81,6 +81,47 @@ class BloodnetFlowIT extends IntegrationTestBase {
     }
 
     @Test
+    void bootstrapAdminFromConfigCanLogIn() throws Exception {
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"boot-admin@test.local\",\"password\":\"Boot-Admin-Pass1\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.role").value("ADMIN"));
+    }
+
+    @Test
+    void adminSignupNeedsTheSetupCode() throws Exception {
+        mvc.perform(get("/api/auth/signup-status"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.adminSignupEnabled").value(true));
+
+        String body = """
+                {"email":"new-admin@test.local","fullName":"New Admin","password":"Strong-Pass-99","setupCode":"%s"}""";
+        mvc.perform(post("/api/auth/signup-admin").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("wrong-code-000")))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/auth/signup-admin").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("test-setup-code-1234").replace("Strong-Pass-99", "short")))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.errors.password").exists());
+
+        String token = "Bearer " + body(mvc.perform(post("/api/auth/signup-admin").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("test-setup-code-1234")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.user.role").value("ADMIN"))).get("token").asText();
+
+        // the new admin can add users straight away
+        mvc.perform(post("/api/users").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("email", "staff-new@test.local", "fullName", "New Staff",
+                                "password", "Staff-Pass-77", "role", "BANK_STAFF", "bankId", bank1))))
+                .andExpect(status().isCreated());
+
+        // same email twice is a conflict, and the setup code never lands in the audit log
+        mvc.perform(post("/api/auth/signup-admin").contentType(MediaType.APPLICATION_JSON)
+                        .content(body.formatted("test-setup-code-1234")))
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE target LIKE '%test-setup-code%' OR detail LIKE '%test-setup-code%'",
+                Integer.class)).isZero();
+    }
+
+    @Test
     void donationCreatesUnitsAndEnforces90DayRule() throws Exception {
         String staff1 = login("staff1@bloodnet.local");
         long donorId = registerDonor(staff1, "A_POS", "9000000001");

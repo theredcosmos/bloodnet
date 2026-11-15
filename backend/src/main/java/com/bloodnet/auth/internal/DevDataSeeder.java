@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "bloodnet.seed.enabled", havingValue = "true")
+@org.springframework.core.annotation.Order(1)
 class DevDataSeeder implements ApplicationRunner {
 
     private final AppUserRepository users;

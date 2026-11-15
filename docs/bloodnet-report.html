@@ -169,7 +169,7 @@ html { scroll-behavior: smooth; }
 
       <div class="facts">
         <div class="fact"><div class="n">7</div><div class="l">business modules, boundaries checked by a test</div></div>
-        <div class="fact"><div class="n">41</div><div class="l">backend tests passing (29 unit, 12 on real MySQL)</div></div>
+        <div class="fact"><div class="n">43</div><div class="l">backend tests passing (29 unit, 14 on real MySQL)</div></div>
         <div class="fact hl"><div class="n">60 / 60</div><div class="l">units reserved by 50 parallel requests, 0 given twice</div></div>
         <div class="fact"><div class="n">126</div><div class="l">compatibility rules generated from 2 SQL rules</div></div>
         <div class="fact"><div class="n">141 KB</div><div class="l">initial Angular download (gzipped), screens lazy-loaded</div></div>
@@ -189,7 +189,7 @@ html { scroll-behavior: smooth; }
       <div class="tbl"><table>
         <thead><tr><th>Role</th><th>Lands on</th><th>Can do</th></tr></thead>
         <tbody>
-          <tr><td><span class="pill red">ADMIN</span></td><td>Dashboard (all banks)</td><td>Everything, across all banks; create users; force a dashboard refresh</td></tr>
+          <tr><td><span class="pill red">ADMIN</span></td><td>Dashboard (all banks)</td><td>Everything, across all banks; create users; force a dashboard refresh. Can sign up from the login page with the server's setup code</td></tr>
           <tr><td><span class="pill info">BANK_STAFF</span></td><td>Dashboard (own bank)</td><td>Donors, donations, inventory, allocate/issue requests, transfers, reports. Only for their own bank</td></tr>
           <tr><td><span class="pill ok">HOSPITAL</span></td><td>Hospital portal</td><td>Search nearby banks, raise and cancel their own requests, follow their status</td></tr>
         </tbody>
@@ -215,6 +215,13 @@ flowchart LR
   J[Scheduled jobs<br/>ShedLock] --> S
       </pre></div>
       <p class="cap">One Spring Boot app behind nginx. Stock changes caused by transfers run inside the same transaction; notifications run afterwards.</p>
+
+      <h3>Getting the first admin in</h3>
+      <ol class="flow">
+        <li><div>On startup, if <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code> are set and that email isn't registered, the app creates that admin account.</div></li>
+        <li><div>Other admins can use <strong>Create admin account</strong> on the login page. It only appears when <code>ADMIN_SIGNUP_CODE</code> (12+ characters) is set on the server, and the form needs that code. A wrong code returns <span class="pill warn">403</span>.</div></li>
+        <li><div>Once signed in, the admin adds bank staff and hospital users from the <strong>Users</strong> page. There is no public sign-up for those roles.</div></li>
+      </ol>
 
       <h3>1. Donation becomes stock</h3>
       <ol class="flow">
@@ -392,7 +399,7 @@ FOR UPDATE SKIP LOCKED</pre>
         <tbody>
           <tr><td>0 · Setup</td><td><code>backend/</code>, <code>frontend/</code>, <code>docs/</code>; Spring Boot 3.4 on Java 17 with Web, JPA, Validation, Security, MySQL, Flyway, Actuator, Lombok, Modulith; Angular 17 + Material; <code>docker-compose.dev.yml</code> (MySQL only); GitHub Actions CI</td><td><span class="pill ok">done</span></td></tr>
           <tr><td>1 · Schema & domain</td><td><code>V1__schema.sql</code> (16 tables), <code>V2__seed_compatibility.sql</code> (126 rules, 2 test banks, 1 hospital); 7 modules + shared; <code>BloodGroup</code>, <code>UnitStatus</code>, <code>ComponentType</code> with shelf life; <code>ModularityTest</code></td><td><span class="pill ok">done</span></td></tr>
-          <tr><td>2 · Auth & shell</td><td>BCrypt users, JWT login + filter, 3 roles, <code>@PreAuthorize</code> + own-bank checks, <code>GlobalExceptionHandler</code> (problem+json); Angular login, <code>AuthService</code>, JWT + error interceptors, role guard, red sidebar, lazy routes</td><td><span class="pill ok">done</span></td></tr>
+          <tr><td>2 · Auth & shell</td><td>BCrypt users, JWT login + filter, 3 roles, <code>@PreAuthorize</code> + own-bank checks, <code>GlobalExceptionHandler</code> (problem+json); Angular login, <code>AuthService</code>, JWT + error interceptors, role guard, red sidebar, lazy routes. Added later: first admin from config and a setup-code-gated admin sign-up page</td><td><span class="pill ok">done</span></td></tr>
           <tr><td>3 · Donors & inventory</td><td>Donor registration, 90-day and age rule, donation → one unit per component; inventory API with filters, paging and whitelisted sorting; Donors and Inventory screens</td><td><span class="pill ok">done</span></td></tr>
           <tr><td>4 · Requests & allocation</td><td>Hospital request API; <code>allocate()</code> with row lock + SKIP LOCKED at READ_COMMITTED; issue; 2 h reservation timeout; 50-thread concurrency test; Hospital portal and Requests screens</td><td><span class="pill ok">done</span></td></tr>
           <tr><td>5 · Nearby & transfers</td><td><code>ST_Distance_Sphere</code> search; transfer state machine; <code>TransferDispatched</code>/<code>TransferReceived</code> events move stock; Transfers screen with Incoming/Outgoing tabs and progress steps</td><td><span class="pill ok">done</span></td></tr>
@@ -407,8 +414,8 @@ FOR UPDATE SKIP LOCKED</pre>
       <div class="cols2">
         <div class="panel"><h3>Unit & architecture (29)</h3>
           <p><code>EligibilityPolicyTest</code> (6), <code>BloodRequestTest</code> (6), <code>TransferStatusTest</code> (11), <code>JwtServiceTest</code> (4: round trip, expired, tampered, short secret), <code>ModularityTest</code> (2, also writes PlantUML module diagrams).</p></div>
-        <div class="panel"><h3>Integration on MySQL (12)</h3>
-          <p><code>BloodnetFlowIT</code> (9): security rules, donation → units + 90-day rule + validation errors, request → allocate → issue, timeout release, transfer flow, dispatch rollback, expiry job, dashboard, seed data. <code>AllocationConcurrencyIT</code> (3).</p></div>
+        <div class="panel"><h3>Integration on MySQL (14)</h3>
+          <p><code>BloodnetFlowIT</code> (11): security rules, admin from config, admin sign-up with right/wrong setup code, donation → units + 90-day rule + validation errors, request → allocate → issue, timeout release, transfer flow, dispatch rollback, expiry job, dashboard, seed data. <code>AllocationConcurrencyIT</code> (3).</p></div>
         <div class="panel"><h3>Frontend (4)</h3>
           <p>Root component plus the group, label and relative-time pipes. Production build passes the size budgets.</p></div>
       </div>
@@ -514,6 +521,7 @@ docker compose up -d --build
 cd frontend && npx ng test --watch=false</pre></div>
       </div>
       <p>Demo users when seeding is on: <code>admin@bloodnet.local</code>, <code>staff1@bloodnet.local</code> (Central), <code>staff2@bloodnet.local</code> (Eastside), <code>hospital@bloodnet.local</code>. The password is <code>SEED_PASSWORD</code> in <code>.env</code>.</p>
+      <p>Your own admin comes from <code>ADMIN_EMAIL</code> / <code>ADMIN_PASSWORD</code> in <code>.env</code>, and the code for the admin sign-up page is <code>ADMIN_SIGNUP_CODE</code>. Leave the code empty to hide the sign-up page.</p>
     </section>
   </main>
 </div>
@@ -614,6 +622,8 @@ const QA = [
     a: "<p><code>sessionStorage</code>. An XSS bug could read it; Angular escapes template output by default, which limits that. An httpOnly cookie resists XSS better but brings back CSRF, so it's a trade-off either way.</p>" },
   { cat: "Security", q: "How do you prevent user enumeration on login?",
     a: "<p>Same error for unknown email and wrong password, and an unknown email still runs a BCrypt check against a dummy hash so the timing is the same.</p>" },
+  { cat: "Security", q: "How does the first admin get in? Why isn't there an open sign-up?", ref: "AdminBootstrap, AuthService.signupAdmin",
+    a: "<p>At startup the app creates an admin from <code>ADMIN_EMAIL</code>/<code>ADMIN_PASSWORD</code> if that email isn't registered. There's also a \"Create admin account\" page, but it only works with the server's <code>ADMIN_SIGNUP_CODE</code>: an open admin sign-up would let anyone take over. The code is compared in constant time and kept out of the audit log. Staff and hospital accounts are created by an admin, never self-registered.</p>" },
   { cat: "Security", q: "Where do secrets live?",
     a: "<p>Environment variables. <code>JWT_SECRET</code> must be at least 256 bits or the app refuses to start. <code>.env</code> is git-ignored; <code>.env.example</code> is committed.</p>" },
 

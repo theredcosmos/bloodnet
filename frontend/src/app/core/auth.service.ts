@@ -28,14 +28,24 @@ export class AuthService {
   readonly role = computed(() => this._user()?.role ?? null);
 
   login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
-      tap(res => {
-        sessionStorage.setItem(TOKEN_KEY, res.token);
-        sessionStorage.setItem(EXPIRES_KEY, res.expiresAt);
-        sessionStorage.setItem(USER_KEY, JSON.stringify(res.user));
-        this._user.set(res.user);
-      }),
-    );
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(tap(res => this.store(res)));
+  }
+
+  /** Is the admin sign-up page switched on for this server? */
+  signupStatus(): Observable<{ adminSignupEnabled: boolean }> {
+    return this.http.get<{ adminSignupEnabled: boolean }>('/api/auth/signup-status');
+  }
+
+  /** Creates an admin account (needs the server's setup code) and signs straight in. */
+  signupAdmin(body: { email: string; fullName: string; password: string; setupCode: string }): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>('/api/auth/signup-admin', body).pipe(tap(res => this.store(res)));
+  }
+
+  private store(res: LoginResponse): void {
+    sessionStorage.setItem(TOKEN_KEY, res.token);
+    sessionStorage.setItem(EXPIRES_KEY, res.expiresAt);
+    sessionStorage.setItem(USER_KEY, JSON.stringify(res.user));
+    this._user.set(res.user);
   }
 
   logout(redirect = true): void {

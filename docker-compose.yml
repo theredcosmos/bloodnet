@@ -29,6 +29,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8081}
       SEED_DEMO_USERS: ${SEED_DEMO_USERS:-true}
       SEED_PASSWORD: ${SEED_PASSWORD:-Bloodnet@123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrator}
+      ADMIN_SIGNUP_CODE: ${ADMIN_SIGNUP_CODE:-}
     depends_on:
       mysql:
         condition: service_healthy

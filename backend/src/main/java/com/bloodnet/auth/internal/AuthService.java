@@ -5,13 +5,17 @@ import com.bloodnet.request.HospitalDirectory;
 import com.bloodnet.shared.Audited;
 import com.bloodnet.shared.BusinessRuleException;
 import com.bloodnet.shared.ConflictException;
+import com.bloodnet.shared.ForbiddenOperationException;
 import com.bloodnet.shared.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Clock;
 import java.util.List;
 
@@ -25,6 +29,9 @@ public class AuthService {
     private final BankDirectory banks;
     private final HospitalDirectory hospitals;
     private final Clock clock;
+
+    @Value("${bloodnet.admin-signup.code:}")
+    private String signupCode;
 
     /** Real BCrypt hash used when the email is unknown, so "no such user" costs the same time as
      *  "wrong password" and response timing cannot reveal which emails exist. */
@@ -80,6 +87,33 @@ public class AuthService {
         u.setEnabled(true);
         u.setCreatedAt(clock.instant());
         return users.save(u);
+    }
+
+    /**
+     * Public admin sign-up. Only works when ADMIN_SIGNUP_CODE is set on the server (12+ chars) and the
+     * caller knows it, otherwise anyone who can reach the site could make themselves admin.
+     * The code travels inside the record so the audit aspect (which logs plain String args) never sees it.
+     */
+    public record AdminSignup(String email, String fullName, String password, String setupCode) {
+    }
+
+    public boolean adminSignupEnabled() {
+        return signupCode != null && signupCode.length() >= 12;
+    }
+
+    @Audited("ADMIN_SIGNUP")
+    @Transactional
+    public LoginResult signupAdmin(AdminSignup cmd) {
+        if (!adminSignupEnabled()) {
+            throw new ForbiddenOperationException("Admin sign-up is turned off on this server");
+        }
+        // constant-time compare so the response time doesn't leak how much of the code was right
+        if (cmd.setupCode() == null || !MessageDigest.isEqual(
+                cmd.setupCode().getBytes(StandardCharsets.UTF_8), signupCode.getBytes(StandardCharsets.UTF_8))) {
+            throw new ForbiddenOperationException("The setup code is not correct");
+        }
+        AppUser u = create(new NewUser(cmd.email(), cmd.fullName(), cmd.password(), Role.ADMIN, null, null));
+        return new LoginResult(jwt.issue(u), u);
     }
 
     @Transactional(readOnly = true)
