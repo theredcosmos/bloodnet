@@ -44,6 +44,11 @@ public class AuthService {
         return dummyHash;
     }
 
+    /** @Size(max=72) counts characters; BCrypt's limit is 72 UTF-8 bytes. */
+    static boolean tooLongForBcrypt(String password) {
+        return password.getBytes(StandardCharsets.UTF_8).length > 72;
+    }
+
     public record LoginResult(JwtService.Token token, AppUser user) {
     }
 
@@ -52,6 +57,10 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResult login(String email, String password) {
+        // BCrypt only hashes 72 bytes and the encoder throws above that; no stored password can be longer.
+        if (password == null || tooLongForBcrypt(password)) {
+            throw new BadCredentialsException("bad credentials");
+        }
         AppUser u = users.findByEmailIgnoreCase(email.trim()).orElse(null);
         String hash = u == null ? dummyHash() : u.getPasswordHash();
         boolean ok = encoder.matches(password, hash);
@@ -64,6 +73,9 @@ public class AuthService {
     @Audited("CREATE_USER")
     @Transactional
     public AppUser create(NewUser cmd) {
+        if (cmd.password() == null || tooLongForBcrypt(cmd.password())) {
+            throw new BusinessRuleException("Password must be at most 72 bytes (fewer characters if it uses non-English letters)");
+        }
         if (users.existsByEmailIgnoreCase(cmd.email())) {
             throw new ConflictException("Email already registered");
         }

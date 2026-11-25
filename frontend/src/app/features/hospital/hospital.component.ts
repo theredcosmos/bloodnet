@@ -58,7 +58,7 @@ import { BLOOD_GROUPS, BloodRequest, COMPONENTS, Hospital, NearbyBank } from '..
             </mat-form-field>
             <mat-form-field>
               <mat-label>Search radius (km)</mat-label>
-              <input matInput type="number" formControlName="radiusKm" (change)="findBanks()" />
+              <input matInput type="number" min="1" max="500" formControlName="radiusKm" (change)="findBanks()" />
             </mat-form-field>
           </div>
 
@@ -74,11 +74,15 @@ import { BLOOD_GROUPS, BloodRequest, COMPONENTS, Hospital, NearbyBank } from '..
               <div class="count">{{ b.availableUnits }}<span class="muted"> units</span></div>
             </label>
           } @empty {
-            <p class="muted">Choose a group and component to see nearby banks.</p>
+            @if (searched()) {
+              <p class="muted">No blood banks within {{ form.value.radiusKm }} km. Try a wider radius.</p>
+            } @else {
+              <p class="muted">Choose a group and component to see nearby banks.</p>
+            }
           }
 
           <div class="actions" style="margin-top:12px">
-            <button mat-flat-button color="primary" [disabled]="form.invalid">Send request</button>
+            <button mat-flat-button color="primary" [disabled]="form.invalid || sending()">Send request</button>
           </div>
         </form>
 
@@ -109,6 +113,7 @@ import { BLOOD_GROUPS, BloodRequest, COMPONENTS, Hospital, NearbyBank } from '..
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="['what', 'status', 'act']"></tr>
             <tr mat-row *matRowDef="let row; columns: ['what', 'status', 'act']"></tr>
+            <tr class="mat-row" *matNoDataRow><td class="mat-cell muted" colspan="3" style="padding:16px">No requests yet</td></tr>
           </table>
         </div>
       </div>
@@ -136,6 +141,9 @@ export class HospitalComponent implements OnInit {
   readonly hospital = signal<Hospital | null>(null);
   readonly nearby = signal<NearbyBank[]>([]);
   readonly mine = signal<BloodRequest[]>([]);
+  readonly searched = signal(false);
+  readonly sending = signal(false);
+  private searchSeq = 0;
 
   readonly form = this.fb.group({
     bloodGroup: ['', Validators.required],
@@ -143,23 +151,29 @@ export class HospitalComponent implements OnInit {
     units: [1, [Validators.required, Validators.min(1), Validators.max(20)]],
     urgency: ['URGENT', Validators.required],
     patientRef: ['', [Validators.required, Validators.maxLength(60)]],
-    radiusKm: [25],
+    radiusKm: [25, [Validators.required, Validators.min(1), Validators.max(500)]],
     bankId: [null as number | null, Validators.required],
   });
 
   ngOnInit(): void {
-    this.api.myHospital().subscribe(h => this.hospital.set(h));
+    this.api.myHospital().subscribe(h => {
+      this.hospital.set(h);
+      this.findBanks(); // the user may have picked a group before the hospital location arrived
+    });
     this.loadMine();
   }
 
   findBanks(): void {
     const h = this.hospital();
     const v = this.form.getRawValue();
-    if (!h || !v.bloodGroup || !v.componentType) return;
+    if (!h || !v.bloodGroup || !v.componentType || this.form.controls.radiusKm.invalid) return;
+    const seq = ++this.searchSeq;
     this.api.nearby({
       lat: h.latitude, lng: h.longitude, radiusKm: v.radiusKm ?? 25,
       bloodGroup: v.bloodGroup, component: v.componentType, includeCompatible: true,
     }).subscribe(list => {
+      if (seq !== this.searchSeq) return; // a newer search is in flight; ignore this stale answer
+      this.searched.set(true);
       this.nearby.set(list);
       // pre-select the closest bank that actually has stock
       const best = list.find(b => b.availableUnits > 0);
@@ -168,11 +182,17 @@ export class HospitalComponent implements OnInit {
   }
 
   submit(): void {
+    if (this.form.invalid || this.sending()) return;
     const { radiusKm, ...body } = this.form.getRawValue();
-    this.api.createRequest(body).subscribe(r => {
-      this.snack.open(`Request #${r.id} sent to ${r.bankName}`, undefined, { duration: 3000 });
-      this.form.patchValue({ patientRef: '' });
-      this.loadMine();
+    this.sending.set(true);
+    this.api.createRequest(body).subscribe({
+      next: r => {
+        this.sending.set(false);
+        this.snack.open(`Request #${r.id} sent to ${r.bankName}`, undefined, { duration: 3000 });
+        this.form.controls.patientRef.reset('');
+        this.loadMine();
+      },
+      error: () => this.sending.set(false),
     });
   }
 

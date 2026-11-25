@@ -90,7 +90,7 @@ public class RebalanceService {
                 FROM rebalance_suggestion s
                 JOIN blood_unit u ON u.id = s.unit_id
                 JOIN blood_bank b ON b.id = s.to_bank_id
-                WHERE s.status = 'OPEN' AND u.status = 'AVAILABLE'
+                WHERE s.status = 'OPEN' AND u.status = 'AVAILABLE' AND u.bank_id = s.from_bank_id
                   AND (:bankId IS NULL OR s.from_bank_id = :bankId OR s.to_bank_id = :bankId)
                 ORDER BY u.expires_at
                 LIMIT 200
@@ -101,12 +101,15 @@ public class RebalanceService {
 
     @Transactional
     public void dismiss(Long id) {
-        Long fromBank = jdbc.query("SELECT from_bank_id FROM rebalance_suggestion WHERE id = :id",
-                new MapSqlParameterSource("id", id), rs -> rs.next() ? rs.getLong(1) : null);
-        if (fromBank == null) {
+        long[] banks = jdbc.query("SELECT from_bank_id, to_bank_id FROM rebalance_suggestion WHERE id = :id",
+                new MapSqlParameterSource("id", id), rs -> rs.next() ? new long[]{rs.getLong(1), rs.getLong(2)} : null);
+        if (banks == null) {
             throw new NotFoundException("Suggestion", id);
         }
-        bankAccess.check(fromBank);
+        // openFor() shows a suggestion to both banks, so either side may dismiss it
+        if (!bankAccess.canAccess(banks[0]) && !bankAccess.canAccess(banks[1])) {
+            bankAccess.check(banks[0]); // throws the usual 403
+        }
         jdbc.update("UPDATE rebalance_suggestion SET status = 'DISMISSED' WHERE id = :id", new MapSqlParameterSource("id", id));
     }
 }

@@ -1,4 +1,5 @@
 import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -11,7 +12,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { debounceTime } from 'rxjs';
+import { Subject, catchError, debounceTime, of, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { FromNowPipe, GroupPipe, PrettyPipe } from '../../core/pipes';
@@ -66,7 +67,7 @@ import { BLOOD_GROUPS, Bank, COMPONENTS, UNIT_STATUSES, Unit } from '../../core/
           <mat-label>Unit code</mat-label>
           <input matInput formControlName="code" />
         </mat-form-field>
-        <button mat-button type="button" (click)="filters.reset()">Clear</button>
+        <button mat-button type="button" (click)="clearFilters()">Clear</button>
       </form>
 
       <div class="table-wrap">
@@ -147,13 +148,32 @@ export class InventoryComponent implements OnInit {
   size = 20;
   sort = 'expiresAt,asc';
 
-  ngOnInit(): void {
-    if (this.auth.hasRole('ADMIN')) this.api.banks().subscribe(b => this.banks.set(b));
-    this.filters.valueChanges.pipe(debounceTime(300)).subscribe(() => {
-      this.page = 0;
-      this.paginator?.firstPage();
+  // Every reload goes through one stream: switchMap drops a stale in-flight call, so a slow
+  // response for old filters can never overwrite the rows for the current ones.
+  private readonly reload$ = new Subject<void>();
+
+  constructor() {
+    this.reload$.pipe(
+      switchMap(() => {
+        this.loading.set(true);
+        return this.api.units({ ...this.filters.getRawValue(), page: this.page, size: this.size, sort: this.sort })
+          .pipe(catchError(() => of(null)));
+      }),
+      takeUntilDestroyed(),
+    ).subscribe(p => {
+      this.loading.set(false);
+      if (!p) return;
+      this.rows.set(p.content);
+      this.total.set(p.totalElements);
+    });
+    this.filters.valueChanges.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(() => {
+      this.firstPage();
       this.load();
     });
+  }
+
+  ngOnInit(): void {
+    if (this.auth.hasRole('ADMIN')) this.api.banks().subscribe(b => this.banks.set(b));
     this.load();
   }
 
@@ -165,9 +185,12 @@ export class InventoryComponent implements OnInit {
 
   onSort(s: Sort): void {
     this.sort = s.direction ? `${s.active},${s.direction}` : 'expiresAt,asc';
-    this.page = 0;
-    this.paginator?.firstPage();
+    this.firstPage();
     this.load();
+  }
+
+  clearFilters(): void {
+    this.filters.reset({ status: 'AVAILABLE', code: '' });
   }
 
   discard(u: Unit): void {
@@ -175,15 +198,13 @@ export class InventoryComponent implements OnInit {
     this.api.discardUnit(u.id).subscribe(() => this.load());
   }
 
+  /** Back to page 1. Sets the index directly: paginator.firstPage() would emit (page) and load twice. */
+  private firstPage(): void {
+    this.page = 0;
+    if (this.paginator) this.paginator.pageIndex = 0;
+  }
+
   private load(): void {
-    this.loading.set(true);
-    this.api.units({ ...this.filters.getRawValue(), page: this.page, size: this.size, sort: this.sort }).subscribe({
-      next: p => {
-        this.rows.set(p.content);
-        this.total.set(p.totalElements);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.reload$.next();
   }
 }

@@ -211,16 +211,21 @@ export class FindBloodComponent implements OnInit {
   radiusKm = 25;
   areaKey = '';
   private center = { lat: 18.5204, lng: 73.8567 };
+  private searchSeq = 0;
 
   ngOnInit(): void {
     // Start with the busiest area so the page shows real results straight away.
-    this.api.publicAreas().subscribe(list => {
-      this.areas.set(list);
-      if (list.length) {
-        this.areaKey = list[0].city;
-        this.center = { lat: list[0].latitude, lng: list[0].longitude };
-      }
-      this.search();
+    this.api.publicAreas().subscribe({
+      next: list => {
+        this.areas.set(list);
+        if (list.length) {
+          this.areaKey = list[0].city;
+          this.center = { lat: list[0].latitude, lng: list[0].longitude };
+        }
+        this.search();
+      },
+      // still search around the default centre; search() reports its own error if the server is down
+      error: () => this.search(),
     });
   }
 
@@ -261,16 +266,19 @@ export class FindBloodComponent implements OnInit {
   }
 
   search(): void {
+    const seq = ++this.searchSeq;
     this.loading.set(true);
     this.error.set('');
     this.open.set(null);
     this.api.publicAvailability({ ...this.center, radiusKm: this.radiusKm, bloodGroup: this.group, component: this.component })
       .subscribe({
         next: list => {
+          if (seq !== this.searchSeq) return; // the user changed the search; a newer answer is coming
           this.results.set(list);
           this.loading.set(false);
         },
         error: (e: { status?: number }) => {
+          if (seq !== this.searchSeq) return;
           this.loading.set(false);
           this.results.set([]);
           this.error.set(e.status === 429
@@ -287,7 +295,8 @@ export class FindBloodComponent implements OnInit {
     }
     this.detail.set(null);
     this.open.set(b.bankId);
-    this.api.publicBank(b.bankId).subscribe(d => this.detail.set(d));
+    // only show it if that bank is still the open one (the user may have opened another meanwhile)
+    this.api.publicBank(b.bankId).subscribe(d => { if (this.open() === b.bankId) this.detail.set(d); });
   }
 
   cell(d: PublicBankStock, group: string, component: string): number {

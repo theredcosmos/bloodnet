@@ -7,12 +7,21 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../core/api.service';
 import { FromNowPipe, GroupPipe, PrettyPipe } from '../../core/pipes';
 import { Unit, WastageRow } from '../../core/models';
 
+/** yyyy-MM-dd in the user's own timezone (toISOString() is UTC, which is "yesterday" early in the morning in IST). */
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Quotes a CSV field when it holds a comma, quote or newline. */
+function csvField(v: unknown): string {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 @Component({
@@ -31,7 +40,7 @@ function isoDate(d: Date): string {
               <input matInput type="number" min="1" max="60" [(ngModel)]="days" />
             </mat-form-field>
             <button mat-flat-button color="primary" (click)="loadExpiring()">Run</button>
-            <button mat-button (click)="exportExpiring()"><mat-icon>download</mat-icon> CSV</button>
+            <button mat-button (click)="exportExpiring()" [disabled]="!expiring().length"><mat-icon>download</mat-icon> CSV</button>
           </div>
           <div class="table-wrap">
             <table mat-table [dataSource]="expiring()">
@@ -80,6 +89,7 @@ function isoDate(d: Date): string {
 })
 export class ReportsComponent implements OnInit {
   private api = inject(ApiService);
+  private snack = inject(MatSnackBar);
 
   readonly expCols = ['code', 'group', 'component', 'expires'];
   readonly wasteCols = ['group', 'component', 'reason', 'units'];
@@ -97,21 +107,32 @@ export class ReportsComponent implements OnInit {
   }
 
   loadExpiring(): void {
+    if (!Number.isInteger(this.days) || this.days < 1 || this.days > 60) {
+      this.snack.open('Days must be a whole number from 1 to 60', 'OK', { duration: 3000 });
+      return;
+    }
     this.api.expiring(this.days).subscribe(list => this.expiring.set(list));
   }
 
   loadWastage(): void {
+    if (!this.from || !this.to || this.to < this.from) {
+      this.snack.open('Pick a valid date range (To on or after From)', 'OK', { duration: 3000 });
+      return;
+    }
     this.api.wastage(this.from, this.to).subscribe(list => this.wastage.set(list));
   }
 
   exportExpiring(): void {
     const rows = [['unit_code', 'blood_group', 'component', 'expires_at'],
       ...this.expiring().map(u => [u.unitCode, u.bloodGroup, u.componentType, u.expiresAt])];
-    const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv' });
+    const blob = new Blob([rows.map(r => r.map(csvField).join(',')).join('\n')], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `expiring-${isoDate(new Date())}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    a.remove();
+    // revoking straight away can cancel the download in some browsers
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 }

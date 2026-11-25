@@ -32,6 +32,10 @@ final class UnitSpecs {
         return (r, q, cb) -> t == null ? null : cb.lessThanOrEqualTo(r.get("expiresAt"), t);
     }
 
+    static Specification<BloodUnit> expiresAfter(Instant t) {
+        return (r, q, cb) -> t == null ? null : cb.greaterThan(r.get("expiresAt"), t);
+    }
+
     static Specification<BloodUnit> codeLike(String code) {
         return (r, q, cb) -> code == null || code.isBlank() ? null
                 : cb.like(cb.upper(r.get("unitCode")), "%" + code.trim().toUpperCase() + "%");

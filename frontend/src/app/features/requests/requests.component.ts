@@ -81,7 +81,7 @@ const VIEWS: Record<string, string[]> = {
                   <button mat-stroked-button [disabled]="busy() === r.id" (click)="issue(r)">Issue</button>
                 }
                 @if (r.status !== 'ISSUED' && r.status !== 'CANCELLED') {
-                  <button mat-icon-button matTooltip="Cancel request" (click)="cancel(r)"><mat-icon>close</mat-icon></button>
+                  <button mat-icon-button matTooltip="Cancel request" aria-label="Cancel request" [disabled]="busy() === r.id" (click)="cancel(r)"><mat-icon>close</mat-icon></button>
                 }
               </div>
             </td>
@@ -90,7 +90,7 @@ const VIEWS: Record<string, string[]> = {
           <tr mat-row *matRowDef="let row; columns: columns" [class.emergency]="row.urgency === 'EMERGENCY'"></tr>
           <tr class="mat-row" *matNoDataRow><td class="mat-cell empty" [attr.colspan]="columns.length">No requests</td></tr>
         </table>
-        <mat-paginator [length]="total()" [pageSize]="20" (page)="onPage($event)" />
+        <mat-paginator [length]="total()" [pageSize]="20" [pageIndex]="page()" (page)="onPage($event)" />
       </div>
     </div>
   `,
@@ -108,7 +108,8 @@ export class RequestsComponent implements OnInit {
   readonly total = signal(0);
   readonly view = signal<'open' | 'done' | 'all'>('open');
   readonly busy = signal<number | null>(null);
-  private page = 0;
+  // a signal so the paginator jumps back to page 1 when the view changes
+  readonly page = signal(0);
 
   ngOnInit(): void {
     this.load();
@@ -116,12 +117,12 @@ export class RequestsComponent implements OnInit {
 
   setView(v: 'open' | 'done' | 'all'): void {
     this.view.set(v);
-    this.page = 0;
+    this.page.set(0);
     this.load();
   }
 
   onPage(e: PageEvent): void {
-    this.page = e.pageIndex;
+    this.page.set(e.pageIndex);
     this.load();
   }
 
@@ -154,11 +155,18 @@ export class RequestsComponent implements OnInit {
 
   cancel(r: BloodRequest): void {
     if (!confirm(`Cancel request #${r.id}? Reserved units go back to stock.`)) return;
-    this.api.cancelRequest(r.id).subscribe(() => this.load());
+    this.busy.set(r.id);
+    this.api.cancelRequest(r.id).subscribe({
+      next: () => {
+        this.busy.set(null);
+        this.load();
+      },
+      error: () => this.busy.set(null),
+    });
   }
 
   private load(): void {
-    this.api.requests({ status: VIEWS[this.view()], page: this.page, size: 20 }).subscribe(p => {
+    this.api.requests({ status: VIEWS[this.view()], page: this.page(), size: 20 }).subscribe(p => {
       this.rows.set(p.content);
       this.total.set(p.totalElements);
     });

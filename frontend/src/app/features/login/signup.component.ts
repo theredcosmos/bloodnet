@@ -109,7 +109,8 @@ export class SignupComponent {
         this.loading.set(false);
         this.error.set(e.status === 403 ? 'The setup code is not correct.'
           : e.status === 409 ? 'That email is already registered. Sign in instead.'
-          : 'Could not create the account.');
+          : e.status === 0 ? 'Cannot reach the server. Please try again.'
+          : e.error?.detail || e.error?.title || 'Could not create the account.');
       },
     });
   }

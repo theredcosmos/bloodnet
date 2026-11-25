@@ -34,6 +34,7 @@ public class StockSummaryService {
 
     @Scheduled(fixedDelayString = "${bloodnet.jobs.stock-summary-delay:PT1M}", initialDelayString = "PT5S")
     @SchedulerLock(name = "stockSummaryRefresh", lockAtMostFor = "PT2M", lockAtLeastFor = "PT5S")
+    @Transactional // calling refresh() on this would bypass its proxy, so the upsert and delete need their own tx here
     public void scheduledRefresh() {
         refresh();
     }

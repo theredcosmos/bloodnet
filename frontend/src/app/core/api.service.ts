@@ -41,8 +41,8 @@ export class ApiService {
   discardUnit(id: number) {
     return this.http.post<Unit>(`/api/inventory/units/${id}/discard`, {});
   }
-  rebalanceSuggestions() {
-    return this.http.get<RebalanceSuggestion[]>('/api/inventory/rebalance-suggestions');
+  rebalanceSuggestions(bankId?: number | null) {
+    return this.http.get<RebalanceSuggestion[]>('/api/inventory/rebalance-suggestions', { params: params({ bankId }) });
   }
   dismissSuggestion(id: number) {
     return this.http.post<void>(`/api/inventory/rebalance-suggestions/${id}/dismiss`, {});
@@ -51,6 +51,9 @@ export class ApiService {
   // donors
   donors(q: string, page: number, size: number) {
     return this.http.get<Page<Donor>>('/api/donors', { params: params({ q, page, size }) });
+  }
+  donor(id: number) {
+    return this.http.get<Donor>(`/api/donors/${id}`);
   }
   registerDonor(body: Partial<Donor>) {
     return this.http.post<Donor>('/api/donors', body);

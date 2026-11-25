@@ -92,8 +92,7 @@ public class DonorService {
         donations.saveAndFlush(donation); // flush to get the id used in unit codes
 
         donor.setLastDonationAt(collectedAt);
-        List<ComponentType> components = cmd.components() == null || cmd.components().isEmpty()
-                ? Arrays.asList(ComponentType.separatedComponents()) : cmd.components().stream().distinct().toList();
+        List<ComponentType> components = componentsFor(cmd.components());
         List<UnitView> units = unitIntake.createUnitsForDonation(donation.getId(), bankId, donor.getBloodGroup(),
                 collectedAt, components);
         return new DonationResult(donation, units);
@@ -113,5 +112,19 @@ public class DonorService {
     public List<Donation> history(Long donorId) {
         get(donorId);
         return donations.findByDonorIdOrderByCollectedAtDesc(donorId);
+    }
+
+    /**
+     * One bag is either kept as whole blood or split into components, never both,
+     * otherwise the same donation would be counted twice in stock.
+     */
+    static List<ComponentType> componentsFor(List<ComponentType> requested) {
+        if (requested == null || requested.isEmpty()) return Arrays.asList(ComponentType.separatedComponents());
+        if (requested.stream().anyMatch(java.util.Objects::isNull)) throw new BusinessRuleException("components must not contain empty values");
+        List<ComponentType> distinct = requested.stream().distinct().toList();
+        if (distinct.contains(ComponentType.WHOLE_BLOOD) && distinct.size() > 1) {
+            throw new BusinessRuleException("A donation is either WHOLE_BLOOD or separated components, not both");
+        }
+        return distinct;
     }
 }
