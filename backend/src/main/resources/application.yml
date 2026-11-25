@@ -75,6 +75,12 @@ bloodnet:
   # Public "find blood" page: requests per client IP per minute.
   public:
     requests-per-minute: ${PUBLIC_RATE_LIMIT:60}
+  # Login and admin sign-up attempts per client IP per minute (brute-force guard).
+  auth:
+    attempts-per-minute: ${AUTH_RATE_LIMIT:10}
+  # Header holding the real client IP for the rate limits: X-Real-IP behind our nginx,
+  # X-Forwarded-For behind a platform proxy such as Render (first entry is used).
+  client-ip-header: ${CLIENT_IP_HEADER:X-Real-IP}
   scheduling:
     enabled: true
   jobs:
@@ -97,5 +103,7 @@ logging:
     format:
       console: ecs                 # JSON logs (Elastic Common Schema) for log aggregation
 bloodnet:
+  jwt:
+    secret: ${JWT_SECRET}          # no dev fallback in prod: startup fails if JWT_SECRET is missing
   seed:
     enabled: ${SEED_DEMO_USERS:false}

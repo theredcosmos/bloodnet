@@ -7,7 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { combineLatest, interval, startWith, switchMap } from 'rxjs';
+import { EMPTY, catchError, combineLatest, interval, startWith, switchMap } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { FromNowPipe, GroupPipe, PrettyPipe } from '../../core/pipes';
@@ -135,15 +135,18 @@ export class DashboardComponent implements OnInit {
     // Poll every 60s and whenever the admin switches bank. switchMap drops an in-flight call
     // if a newer one starts, so a slow response can't overwrite fresher data.
     combineLatest([toObservable(this.bankId), interval(60_000).pipe(startWith(0))])
-      .pipe(switchMap(([bank]) => this.api.dashboard(bank)), takeUntilDestroyed())
+      .pipe(switchMap(([bank]) => this.api.dashboard(bank).pipe(catchError(() => EMPTY))), takeUntilDestroyed())
       .subscribe(d => this.data.set(d));
+    // suggestions follow the admin's bank filter too
+    toObservable(this.bankId)
+      .pipe(switchMap(bank => this.api.rebalanceSuggestions(bank).pipe(catchError(() => EMPTY))), takeUntilDestroyed())
+      .subscribe(list => this.suggestions.set(list));
   }
 
   ngOnInit(): void {
     if (this.auth.hasRole('ADMIN')) {
       this.api.banks().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(b => this.banks.set(b));
     }
-    this.loadSuggestions();
   }
 
   available(group: string, component: string): number {
@@ -159,6 +162,6 @@ export class DashboardComponent implements OnInit {
   }
 
   private loadSuggestions(): void {
-    this.api.rebalanceSuggestions().subscribe(list => this.suggestions.set(list));
+    this.api.rebalanceSuggestions(this.bankId()).subscribe(list => this.suggestions.set(list));
   }
 }

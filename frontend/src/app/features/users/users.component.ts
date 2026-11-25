@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,11 +9,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../core/api.service';
 import { Bank, Hospital, User } from '../../core/models';
+import { PrettyPipe } from '../../core/pipes';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [ReactiveFormsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
+  imports: [ReactiveFormsModule, MatTableModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, PrettyPipe],
   template: `
     <div class="page">
       <div class="page-head"><h1>Users</h1></div>
@@ -59,7 +61,7 @@ import { Bank, Hospital, User } from '../../core/models';
           <ng-container matColumnDef="name"><th mat-header-cell *matHeaderCellDef>Name</th>
             <td mat-cell *matCellDef="let u">{{ u.fullName }}<div class="muted">{{ u.email }}</div></td></ng-container>
           <ng-container matColumnDef="role"><th mat-header-cell *matHeaderCellDef>Role</th>
-            <td mat-cell *matCellDef="let u">{{ u.role }}</td></ng-container>
+            <td mat-cell *matCellDef="let u">{{ u.role | pretty }}</td></ng-container>
           <ng-container matColumnDef="scope"><th mat-header-cell *matHeaderCellDef>Bank / hospital</th>
             <td mat-cell *matCellDef="let u">{{ scope(u) }}</td></ng-container>
           <tr mat-header-row *matHeaderRowDef="cols"></tr>
@@ -73,6 +75,7 @@ export class UsersComponent implements OnInit {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
   private snack = inject(MatSnackBar);
+  private destroyRef = inject(DestroyRef);
 
   readonly cols = ['name', 'role', 'scope'];
   readonly users = signal<User[]>([]);
@@ -89,6 +92,9 @@ export class UsersComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Bank staff must pick a bank and hospital users a hospital; otherwise the server rejects the form.
+    this.form.controls.role.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(r => this.applyRole(r));
+    this.applyRole(this.form.controls.role.value);
     this.api.banks().subscribe(b => this.banks.set(b));
     this.api.hospitals().subscribe(h => this.hospitals.set(h));
     this.load();
@@ -101,11 +107,22 @@ export class UsersComponent implements OnInit {
   }
 
   create(): void {
-    this.api.createUser(this.form.getRawValue()).subscribe(u => {
+    const v = this.form.getRawValue();
+    // send only the scope that matches the role (a bank picked before switching to HOSPITAL is dropped)
+    const body = { ...v, bankId: v.role === 'BANK_STAFF' ? v.bankId : null, hospitalId: v.role === 'HOSPITAL' ? v.hospitalId : null };
+    this.api.createUser(body).subscribe(u => {
       this.snack.open(`Created ${u.email}`, undefined, { duration: 2500 });
       this.form.reset({ role: 'BANK_STAFF' });
       this.load();
     });
+  }
+
+  private applyRole(role: string | null): void {
+    const { bankId, hospitalId } = this.form.controls;
+    bankId.setValidators(role === 'BANK_STAFF' ? Validators.required : null);
+    hospitalId.setValidators(role === 'HOSPITAL' ? Validators.required : null);
+    bankId.updateValueAndValidity({ emitEvent: false });
+    hospitalId.updateValueAndValidity({ emitEvent: false });
   }
 
   private load(): void {

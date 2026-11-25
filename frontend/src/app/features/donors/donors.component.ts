@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -89,13 +90,16 @@ import { BLOOD_GROUPS, Donation, Donor } from '../../core/models';
               <th mat-header-cell *matHeaderCellDef>Eligible</th>
               <td mat-cell *matCellDef="let d">
                 @if (d.eligibleNow) { <span class="chip AVAILABLE">Yes</span> }
-                @else { <span class="chip EXPIRED">From {{ d.nextEligibleAt | date: 'dd MMM' }}</span> }
+                @else if (d.nextEligibleAt) { <span class="chip EXPIRED">From {{ d.nextEligibleAt | date: 'dd MMM yyyy' }}</span> }
+                @else { <span class="chip EXPIRED">No</span> }
               </td>
             </ng-container>
             <tr mat-header-row *matHeaderRowDef="columns"></tr>
-            <tr mat-row *matRowDef="let row; columns: columns" (click)="select(row)" [class.selected]="row.id === selected()?.id"></tr>
+            <tr mat-row *matRowDef="let row; columns: columns" (click)="select(row)" (keydown.enter)="select(row)" tabindex="0"
+                [class.selected]="row.id === selected()?.id"></tr>
+            <tr class="mat-row" *matNoDataRow><td class="mat-cell empty" [attr.colspan]="columns.length">No donors found</td></tr>
           </table>
-          <mat-paginator [length]="total()" [pageSize]="20" (page)="onPage($event)" />
+          <mat-paginator [length]="total()" [pageSize]="20" [pageIndex]="page()" (page)="onPage($event)" />
         </div>
 
         <div class="card side">
@@ -105,7 +109,10 @@ import { BLOOD_GROUPS, Donation, Donor } from '../../core/models';
 
             <h4>Record donation</h4>
             @if (!d.eligibleNow) {
-              <p class="warn">Not eligible until {{ d.nextEligibleAt | date: 'dd MMM yyyy' }} (90-day rule or age limit).</p>
+              <p class="warn">
+                @if (d.nextEligibleAt) { Not eligible until {{ d.nextEligibleAt | date: 'dd MMM yyyy' }} (90-day rule or age limit). }
+                @else { Not eligible to donate (age limit). }
+              </p>
             }
             <form [formGroup]="donationForm" (ngSubmit)="recordDonation(d)">
               <mat-form-field class="full"><mat-label>Volume (ml)</mat-label><input matInput type="number" formControlName="volumeMl" /></mat-form-field>
@@ -146,12 +153,14 @@ import { BLOOD_GROUPS, Donation, Donor } from '../../core/models';
     .checks { display: flex; flex-direction: column; margin-bottom: 12px; }
     .unit { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f2eded; }
     .warn { color: var(--bn-red); font-size: 13px; }
+    .empty { padding: 24px; text-align: center; color: var(--bn-muted); }
   `],
 })
 export class DonorsComponent implements OnInit {
   private api = inject(ApiService);
   private fb = inject(FormBuilder);
   private snack = inject(MatSnackBar);
+  private destroyRef = inject(DestroyRef);
 
   readonly groups = BLOOD_GROUPS;
   readonly columns = ['name', 'group', 'last', 'eligible'];
@@ -162,7 +171,7 @@ export class DonorsComponent implements OnInit {
   readonly lastCreated = signal<Donation['units']>([]);
   readonly showRegister = signal(false);
   readonly search = new FormControl('', { nonNullable: true });
-  private page = 0;
+  readonly page = signal(0);
 
   readonly donorForm = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
@@ -181,15 +190,15 @@ export class DonorsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.search.valueChanges.pipe(debounceTime(300)).subscribe(() => {
-      this.page = 0;
+    this.search.valueChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.page.set(0);
       this.load();
     });
     this.load();
   }
 
   onPage(e: PageEvent): void {
-    this.page = e.pageIndex;
+    this.page.set(e.pageIndex);
     this.load();
   }
 
@@ -222,12 +231,13 @@ export class DonorsComponent implements OnInit {
       this.lastCreated.set(res.units);
       this.load();
       this.api.donations(d.id).subscribe(h => this.history.set(h));
-      this.selected.set({ ...d, eligibleNow: false, lastDonationAt: res.collectedAt });
+      // fresh copy from the server so eligibility and the next eligible date are right
+      this.api.donor(d.id).subscribe(fresh => this.selected.set(fresh));
     });
   }
 
   private load(): void {
-    this.api.donors(this.search.value, this.page, 20).subscribe(p => {
+    this.api.donors(this.search.value, this.page(), 20).subscribe(p => {
       this.donors.set(p.content);
       this.total.set(p.totalElements);
     });

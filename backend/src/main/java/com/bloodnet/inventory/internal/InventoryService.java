@@ -32,10 +32,12 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public Page<BloodUnit> search(Long bankId, BloodGroup group, ComponentType component, UnitStatus status,
                                   Integer expiringWithinDays, String code, Pageable pageable) {
-        Instant before = expiringWithinDays == null ? null : clock.instant().plus(Duration.ofDays(expiringWithinDays));
+        Instant now = clock.instant();
+        Instant before = expiringWithinDays == null ? null : now.plus(Duration.ofDays(expiringWithinDays));
+        Instant after = expiringWithinDays == null ? null : now;
         Specification<BloodUnit> spec = Specification.where(UnitSpecs.bank(bankId))
                 .and(UnitSpecs.group(group)).and(UnitSpecs.component(component))
-                .and(UnitSpecs.status(status)).and(UnitSpecs.expiresBefore(before)).and(UnitSpecs.codeLike(code));
+                .and(UnitSpecs.status(status)).and(UnitSpecs.expiresAfter(after)).and(UnitSpecs.expiresBefore(before)).and(UnitSpecs.codeLike(code));
         return units.findAll(spec, pageable);
     }
 

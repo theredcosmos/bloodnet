@@ -104,7 +104,9 @@ class BloodnetFlowIT extends IntegrationTestBase {
                 .andExpect(jsonPath("$.bank.name").value("Central Blood Bank"))
                 .andExpect(jsonPath("$.stock[?(@.bloodGroup == 'O_NEG' && @.componentType == 'RED_CELLS')].available")
                         .value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.greaterThanOrEqualTo(1))));
-        mvc.perform(get("/api/public/areas")).andExpect(status().isOk()).andExpect(jsonPath("$[0].city").value("Pune"));
+        // other ITs share this database and add banks in their own city, so Pune need not be first
+        mvc.perform(get("/api/public/areas")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[*].city").value(org.hamcrest.Matchers.hasItem("Pune")));
 
         // bad input is a clean 400, and the rest of the API still needs a token
         mvc.perform(get("/api/public/availability").param("lat", "999").param("lng", "73.8"))

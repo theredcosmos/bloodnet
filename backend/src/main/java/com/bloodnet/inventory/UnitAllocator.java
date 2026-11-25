@@ -39,8 +39,11 @@ public class UnitAllocator {
                                         long requestId, Instant reservedUntil) {
         if (maxUnits <= 0) return List.of();
         Instant now = clock.instant();
+        // A unit that expires while it is held could never be issued (issueForRequest refuses expired units)
+        // and would block the request until the hold times out, so it must outlive the reservation.
+        Instant mustExpireAfter = reservedUntil.isAfter(now) ? reservedUntil : now;
         List<Long> ids = sql.lockAvailable(bankId, component, compatibility.donorsFor(recipient, component),
-                recipient, now, maxUnits);
+                recipient, mustExpireAfter, maxUnits);
         int updated = sql.reserve(ids, requestId, reservedUntil, now);
         if (updated != ids.size()) {
             // Cannot happen while rows are locked; fail loudly rather than silently under-count.

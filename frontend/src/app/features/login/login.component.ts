@@ -77,9 +77,12 @@ export class LoginComponent {
     this.error.set('');
     this.auth.login(email, password).subscribe({
       next: () => this.router.navigateByUrl(this.auth.homeUrl()),
-      error: () => {
+      error: (e: { status?: number }) => {
         this.loading.set(false);
-        this.error.set('Wrong email or password.');
+        this.error.set(e.status === 401 || e.status === 400 ? 'Wrong email or password.'
+          : e.status === 0 ? 'Cannot reach the server. Please try again.'
+          : e.status === 429 ? 'Too many attempts. Please wait a minute and try again.'
+          : 'Sign-in failed. Please try again.');
       },
     });
   }

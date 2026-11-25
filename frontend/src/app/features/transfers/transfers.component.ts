@@ -63,14 +63,22 @@ const ACTION_FOR: Partial<Record<TransferStatus, Action>> = {
             </mat-form-field>
           </div>
           <mat-form-field style="width:100%"><mat-label>Notes</mat-label><input matInput formControlName="notes" /></mat-form-field>
-          <button mat-flat-button color="primary" [disabled]="form.invalid">Send transfer request</button>
+          @if (searched() && !nearby().length) {
+            <p class="muted">No other bank within 100 km holds this group and component.</p>
+          }
+          <button mat-flat-button color="primary" [disabled]="form.invalid || busy()">Send transfer request</button>
         </form>
       }
 
-      <mat-tab-group (selectedIndexChange)="setTab($event)" [selectedIndex]="tab() === 'INCOMING' ? 0 : 1">
-        <mat-tab label="Incoming (we receive)" />
-        <mat-tab label="Outgoing (we send)" />
-      </mat-tab-group>
+      @if (auth.hasRole('ADMIN')) {
+        <!-- an admin has no bank of their own, so "incoming/outgoing" means nothing: show every transfer once -->
+        <p class="muted">All transfers across the network, newest first.</p>
+      } @else {
+        <mat-tab-group (selectedIndexChange)="setTab($event)" [selectedIndex]="tab() === 'INCOMING' ? 0 : 1">
+          <mat-tab label="Incoming (we receive)" />
+          <mat-tab label="Outgoing (we send)" />
+        </mat-tab-group>
+      }
 
       <div class="list">
         @for (t of transfers(); track t.id) {
@@ -98,7 +106,7 @@ const ACTION_FOR: Partial<Record<TransferStatus, Action>> = {
             <div class="actions">
               @for (next of actionsFor(t); track next) {
                 <button mat-stroked-button [color]="next === 'REJECTED' || next === 'CANCELLED' ? 'warn' : 'primary'"
-                        (click)="move(t, next)">{{ label(next) }}</button>
+                        [disabled]="busy()" (click)="move(t, next)">{{ label(next) }}</button>
               }
             </div>
           </div>
@@ -137,6 +145,9 @@ export class TransfersComponent implements OnInit {
   readonly banks = signal<Bank[]>([]);
   readonly nearby = signal<NearbyBank[]>([]);
   readonly showNew = signal(false);
+  readonly searched = signal(false);
+  readonly busy = signal(false);
+  private searchSeq = 0;
   private bankNames = computed(() => new Map(this.banks().map(b => [b.id, b.name])));
 
   readonly form = this.fb.group({
@@ -186,34 +197,55 @@ export class TransfersComponent implements OnInit {
     const action = ACTION_FOR[target];
     if (!action) return;
     if ((action === 'reject' || action === 'cancel') && !confirm(`${this.label(target)} transfer #${t.id}?`)) return;
-    this.api.moveTransfer(t.id, action).subscribe(() => {
-      this.snack.open(`Transfer #${t.id}: ${target.toLowerCase()}`, undefined, { duration: 2500 });
-      this.load();
+    this.busy.set(true);
+    this.api.moveTransfer(t.id, action).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.snack.open(`Transfer #${t.id}: ${target.toLowerCase()}`, undefined, { duration: 2500 });
+        this.load();
+      },
+      error: () => {
+        this.busy.set(false);
+        this.load(); // someone else may have moved it first; show the current state
+      },
     });
   }
 
   search(): void {
     const v = this.form.getRawValue();
     if (!v.bloodGroup || !v.componentType) return;
+    const seq = ++this.searchSeq;
     // exact group only: we are moving stock between banks, not matching a patient
     this.api.nearby({ radiusKm: 100, bloodGroup: v.bloodGroup, component: v.componentType, includeCompatible: false })
       .subscribe(list => {
+        if (seq !== this.searchSeq) return;
+        this.searched.set(true);
         this.nearby.set(list);
         this.form.patchValue({ fromBankId: list.find(b => b.availableUnits > 0)?.bankId ?? null });
       });
   }
 
   create(): void {
-    this.api.createTransfer(this.form.getRawValue()).subscribe(t => {
-      this.snack.open(`Transfer #${t.id} requested`, undefined, { duration: 2500 });
-      this.showNew.set(false);
-      this.form.reset({ componentType: 'RED_CELLS', units: 1 });
-      this.tab.set('INCOMING');
-      this.load();
+    if (this.form.invalid || this.busy()) return;
+    this.busy.set(true);
+    this.api.createTransfer(this.form.getRawValue()).subscribe({
+      next: t => {
+        this.busy.set(false);
+        this.snack.open(`Transfer #${t.id} requested`, undefined, { duration: 2500 });
+        this.showNew.set(false);
+        this.form.reset({ bloodGroup: '', componentType: 'RED_CELLS', units: 1, fromBankId: null, notes: '' });
+        this.nearby.set([]);
+        this.searched.set(false);
+        this.tab.set('INCOMING');
+        this.load();
+      },
+      error: () => this.busy.set(false),
     });
   }
 
   private load(): void {
-    this.api.transfers(this.tab()).subscribe(list => this.transfers.set(list));
+    const tab = this.tab();
+    // drop the answer if the user switched tabs while it was loading
+    this.api.transfers(tab).subscribe(list => { if (tab === this.tab()) this.transfers.set(list); });
   }
 }

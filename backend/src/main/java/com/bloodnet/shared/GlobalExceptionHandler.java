@@ -3,9 +3,8 @@ package com.bloodnet.shared;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -57,7 +56,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.UNAUTHORIZED, "Unauthorized", "Invalid email or password");
     }
 
-    @ExceptionHandler({OptimisticLockingFailureException.class, CannotAcquireLockException.class})
+    // ConcurrencyFailureException covers optimistic locking, lock timeouts and MySQL deadlocks (DeadlockLoserDataAccessException)
+    @ExceptionHandler(ConcurrencyFailureException.class)
     ProblemDetail concurrent(RuntimeException ex) {
         return problem(HttpStatus.CONFLICT, "Concurrent update", "The record was changed by someone else, please retry");
     }
