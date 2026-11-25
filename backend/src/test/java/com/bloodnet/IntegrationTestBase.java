@@ -27,7 +27,9 @@ import java.util.List;
         "spring.datasource.hikari.maximum-pool-size=60",
         "bloodnet.bootstrap-admin.email=boot-admin@test.local",
         "bloodnet.bootstrap-admin.password=Boot-Admin-Pass1",
-        "bloodnet.admin-signup.code=test-setup-code-1234"
+        "bloodnet.admin-signup.code=test-setup-code-1234",
+        // every test logs in from the same address; the limit itself is covered by PublicRateLimitFilterTest
+        "bloodnet.auth.attempts-per-minute=10000"
 })
 public abstract class IntegrationTestBase {
 
